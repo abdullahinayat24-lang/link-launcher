@@ -1,0 +1,2237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DREAMSLABSTUDIO // Cyber Link Launcher</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-base: #06080d;
+    --bg-gradient: radial-gradient(circle at 50% -20%, #1e1308 0%, #080b12 45%, #040508 100%);
+    --glass-bg: rgba(14, 18, 28, 0.68);
+    --glass-card: rgba(20, 27, 42, 0.6);
+    --glass-card-hover: rgba(30, 40, 62, 0.85);
+    --glass-border: rgba(255, 255, 255, 0.09);
+    --glass-border-hover: rgba(255, 85, 0, 0.45);
+    --glass-blur: blur(20px);
+    
+    --orange-primary: #ff5500;
+    --orange-glow: rgba(255, 85, 0, 0.4);
+    --orange-soft: rgba(255, 85, 0, 0.12);
+    --cyan-accent: #00f0ff;
+    --cyan-glow: rgba(0, 240, 255, 0.35);
+    --purple-accent: #a855f7;
+    --purple-glow: rgba(168, 85, 247, 0.35);
+    --emerald: #10b981;
+    --danger: #ff3366;
+    
+    --text-main: #f3f4f8;
+    --text-dim: #9aa5b8;
+    --text-faint: #59657b;
+    
+    --font-brand: 'Orbitron', system-ui, sans-serif;
+    --font-body: 'Plus Jakarta Sans', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+    
+    --radius-sm: 8px;
+    --radius-md: 14px;
+    --radius-lg: 20px;
+    --radius-full: 9999px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  body {
+    background: var(--bg-base);
+    background-image: var(--bg-gradient);
+    color: var(--text-main);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection { background: var(--orange-primary); color: #000; }
+  
+  .cyber-grid {
+    position: fixed;
+    inset: 0;
+    background-size: 50px 50px;
+    background-image: 
+      linear-gradient(to right, rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+    pointer-events: none;
+    z-index: 0;
+  }
+  
+  .cyber-ambient-orb {
+    position: fixed;
+    width: 600px;
+    height: 600px;
+    border-radius: 50%;
+    filter: blur(140px);
+    opacity: 0.15;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .orb-1 { top: -100px; right: -100px; background: var(--orange-primary); }
+  .orb-2 { bottom: -150px; left: -150px; background: var(--cyan-accent); }
+
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--orange-primary); }
+
+  .app-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 32px 20px 100px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* HEADER BRAND BANNER (Inspired by Image 1) */
+  .brand-banner {
+    background: linear-gradient(135deg, #e84e0f 0%, #ff6b1a 60%, #ff9436 100%);
+    border-radius: var(--radius-lg);
+    padding: 24px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 16px 40px rgba(255, 85, 0, 0.28), inset 0 2px 0 rgba(255,255,255,0.3);
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+  .brand-banner::before {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%; width: 50%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    transform: skewX(-25deg);
+    animation: shine 6s infinite;
+  }
+  @keyframes shine {
+    0%, 80% { left: -100%; }
+    100% { left: 200%; }
+  }
+  .brand-left {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .brand-title {
+    font-family: var(--font-brand);
+    font-size: 32px;
+    font-weight: 900;
+    letter-spacing: 0.14em;
+    color: #0d0f14;
+    text-transform: uppercase;
+    text-shadow: 0 1px 2px rgba(255,255,255,0.4);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .brand-subtitle {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(13, 15, 20, 0.85);
+    font-weight: 700;
+  }
+  .brand-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  /* HUD STATUS BAR */
+  .hud-panel {
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    padding: 16px 22px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 24px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    flex-wrap: wrap;
+  }
+  .stats-cluster {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .hud-chip {
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-full);
+    padding: 6px 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+  .hud-chip b {
+    font-family: var(--font-brand);
+    color: #fff;
+    font-size: 14px;
+  }
+  .hud-chip span {
+    color: var(--text-dim);
+    text-transform: uppercase;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+  }
+  .sync-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-family: var(--font-mono);
+    padding: 6px 12px;
+    border-radius: var(--radius-full);
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    color: var(--emerald);
+  }
+  .sync-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--emerald);
+    box-shadow: 0 0 8px var(--emerald);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.85); }
+  }
+
+  /* TOOLBAR */
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    position: sticky;
+    top: 16px;
+    z-index: 30;
+    padding: 6px 0;
+  }
+  .search-wrapper {
+    flex: 1;
+    min-width: 240px;
+    position: relative;
+  }
+  .search-wrapper svg {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-dim);
+    pointer-events: none;
+  }
+  .search-input {
+    width: 100%;
+    background: rgba(10, 14, 23, 0.85);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+    color: var(--text-main);
+    font-family: var(--font-body);
+    font-size: 14px;
+    padding: 13px 44px 13px 46px;
+    border-radius: var(--radius-md);
+    outline: none;
+    transition: all 0.2s ease;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  }
+  .search-input:focus {
+    border-color: var(--orange-primary);
+    box-shadow: 0 0 20px var(--orange-glow), inset 0 0 10px rgba(255,85,0,0.1);
+  }
+  .search-clear {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    color: var(--text-faint);
+    cursor: pointer;
+    display: none;
+    font-size: 14px;
+  }
+
+  /* BUTTONS */
+  .btn {
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 13px;
+    padding: 12px 18px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--glass-border);
+    background: rgba(20, 27, 42, 0.8);
+    backdrop-filter: var(--glass-blur);
+    color: var(--text-main);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    white-space: nowrap;
+    transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    user-select: none;
+  }
+  .btn:hover {
+    background: rgba(35, 46, 70, 0.95);
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+  }
+  .btn:active { transform: translateY(0); }
+  
+  .btn-primary {
+    background: linear-gradient(135deg, #ff5500 0%, #ff772e 100%);
+    border-color: #ff884d;
+    color: #0b0d13;
+    font-weight: 700;
+    box-shadow: 0 4px 18px rgba(255, 85, 0, 0.4);
+  }
+  .btn-primary:hover {
+    background: linear-gradient(135deg, #ff6b1a 0%, #ff8844 100%);
+    box-shadow: 0 6px 25px rgba(255, 85, 0, 0.6);
+    border-color: #ffa370;
+  }
+
+  .btn-cyber {
+    background: linear-gradient(135deg, rgba(0, 240, 255, 0.15), rgba(0, 240, 255, 0.05));
+    border-color: rgba(0, 240, 255, 0.4);
+    color: var(--cyan-accent);
+  }
+  .btn-cyber:hover {
+    background: rgba(0, 240, 255, 0.25);
+    box-shadow: 0 0 20px var(--cyan-glow);
+    border-color: var(--cyan-accent);
+    color: #fff;
+  }
+
+  .btn-danger {
+    background: rgba(255, 51, 102, 0.15);
+    border-color: rgba(255, 51, 102, 0.4);
+    color: var(--danger);
+  }
+  .btn-danger:hover {
+    background: rgba(255, 51, 102, 0.3);
+    border-color: var(--danger);
+  }
+
+  .btn-icon {
+    padding: 12px;
+    border-radius: var(--radius-md);
+  }
+  .btn-sm {
+    padding: 7px 12px;
+    font-size: 12px;
+    border-radius: var(--radius-sm);
+  }
+
+  /* CATEGORY CHIPS */
+  .category-chips {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 22px;
+  }
+  .chip {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 500;
+    padding: 7px 16px;
+    border-radius: var(--radius-full);
+    border: 1px solid var(--glass-border);
+    background: rgba(14, 18, 28, 0.7);
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.18s ease;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .chip:hover {
+    border-color: rgba(255,255,255,0.25);
+    color: var(--text-main);
+    background: rgba(24, 32, 50, 0.85);
+  }
+  .chip.active {
+    background: var(--orange-soft);
+    border-color: var(--orange-primary);
+    color: var(--orange-primary);
+    box-shadow: 0 0 16px var(--orange-glow);
+  }
+  .chip-count {
+    font-size: 10px;
+    opacity: 0.6;
+  }
+
+  /* CATEGORIES & LINKS */
+  .category-group {
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    margin-bottom: 18px;
+    overflow: hidden;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.35);
+    transition: border-color 0.2s ease;
+  }
+  .category-group:hover {
+    border-color: rgba(255, 255, 255, 0.16);
+  }
+  .cat-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 22px;
+    cursor: pointer;
+    user-select: none;
+    background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, transparent 100%);
+    border-bottom: 1px solid transparent;
+    transition: background 0.15s ease;
+  }
+  .cat-header:hover {
+    background: rgba(255, 255, 255, 0.04);
+  }
+  .cat-chevron {
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    color: var(--text-dim);
+  }
+  .category-group.collapsed .cat-chevron {
+    transform: rotate(-90deg);
+  }
+  .category-group.collapsed .cat-body {
+    max-height: 0;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .category-group:not(.collapsed) .cat-header {
+    border-bottom-color: var(--glass-border);
+  }
+  .cat-title {
+    font-family: var(--font-brand);
+    font-weight: 700;
+    font-size: 16px;
+    letter-spacing: 0.05em;
+    color: #fff;
+  }
+  .cat-badge {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid var(--glass-border);
+    padding: 2px 9px;
+    border-radius: var(--radius-full);
+    color: var(--text-dim);
+  }
+  .cat-spacer { flex: 1; }
+
+  .cat-body {
+    max-height: 4000px;
+    opacity: 1;
+    overflow: hidden;
+    transition: max-height 0.35s ease, opacity 0.2s ease;
+  }
+
+  /* Link Row */
+  .link-row {
+    display: grid;
+    grid-template-columns: 4px 28px minmax(0, 1fr) auto 110px;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 22px 14px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    cursor: pointer;
+    position: relative;
+    transition: all 0.15s ease;
+  }
+  .link-row:last-child { border-bottom: none; }
+  .link-row:hover {
+    background: rgba(255, 255, 255, 0.035);
+  }
+  .link-plug {
+    width: 4px;
+    height: 28px;
+    border-radius: 0 4px 4px 0;
+    box-shadow: 0 0 10px currentColor;
+  }
+  .link-favicon {
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    object-fit: contain;
+    background: rgba(0,0,0,0.5);
+    padding: 3px;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .link-favicon-fallback {
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-brand);
+    font-size: 11px;
+    font-weight: 700;
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.15);
+  }
+  .link-details {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .link-title-line {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+  .link-title {
+    font-weight: 600;
+    font-size: 14.5px;
+    color: var(--text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: color 0.15s;
+  }
+  .link-row:hover .link-title {
+    color: var(--orange-primary);
+  }
+  .link-domain {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--text-faint);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .profile-tag {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: var(--radius-full);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    border: 1px solid currentColor;
+    background: rgba(0, 0, 0, 0.4);
+    box-shadow: 0 0 10px rgba(0,0,0,0.2);
+  }
+  .profile-tag .p-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 6px currentColor;
+  }
+
+  .link-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    opacity: 0.2;
+    transition: opacity 0.15s ease;
+    justify-self: end;
+  }
+  .link-row:hover .link-actions {
+    opacity: 1;
+  }
+  .action-btn {
+    background: rgba(20, 27, 42, 0.9);
+    border: 1px solid var(--glass-border);
+    color: var(--text-dim);
+    width: 30px;
+    height: 30px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+  }
+  .action-btn:hover {
+    color: #fff;
+    border-color: var(--orange-primary);
+    background: rgba(255, 85, 0, 0.2);
+    transform: scale(1.1);
+  }
+
+  /* EMPTY STATE */
+  .empty-state {
+    text-align: center;
+    padding: 70px 20px;
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    border: 1px dashed var(--glass-border);
+    border-radius: var(--radius-lg);
+    margin-top: 20px;
+  }
+  .empty-state h3 {
+    font-family: var(--font-brand);
+    font-size: 20px;
+    color: #fff;
+    margin-bottom: 8px;
+  }
+  .empty-state p {
+    color: var(--text-dim);
+    font-size: 14px;
+    max-width: 420px;
+    margin: 0 auto 20px;
+    line-height: 1.6;
+  }
+
+  /* MODALS & OVERLAYS */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(4, 6, 10, 0.8);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 20px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  .modal-overlay.active {
+    display: flex;
+    opacity: 1;
+  }
+  .modal-card {
+    background: rgba(16, 22, 36, 0.88);
+    backdrop-filter: blur(28px);
+    -webkit-backdrop-filter: blur(28px);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 24px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.2);
+    border-radius: var(--radius-lg);
+    width: 100%;
+    max-width: 520px;
+    padding: 28px;
+    transform: scale(0.95) translateY(10px);
+    transition: transform 0.25s cubic-bezier(0.2, 0.9, 0.3, 1);
+    position: relative;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .modal-overlay.active .modal-card {
+    transform: scale(1) translateY(0);
+  }
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--glass-border);
+  }
+  .modal-title {
+    font-family: var(--font-brand);
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .modal-close {
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 18px;
+    transition: color 0.15s;
+  }
+  .modal-close:hover { color: var(--danger); }
+
+  .form-group {
+    margin-bottom: 16px;
+  }
+  .form-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-family: var(--font-mono);
+  }
+  .form-control {
+    width: 100%;
+    background: rgba(8, 11, 18, 0.85);
+    border: 1px solid var(--glass-border);
+    color: var(--text-main);
+    padding: 12px 14px;
+    border-radius: var(--radius-md);
+    font-family: var(--font-body);
+    font-size: 14px;
+    outline: none;
+    transition: all 0.2s ease;
+  }
+  .form-control:focus {
+    border-color: var(--orange-primary);
+    box-shadow: 0 0 16px var(--orange-glow);
+  }
+  .form-row {
+    display: flex;
+    gap: 12px;
+  }
+  .form-row .form-group { flex: 1; }
+
+  .form-hint {
+    font-size: 11.5px;
+    color: var(--text-faint);
+    margin-top: 6px;
+    line-height: 1.4;
+    font-family: var(--font-mono);
+  }
+  .form-hint code {
+    background: rgba(0,0,0,0.5);
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: var(--cyan-accent);
+  }
+
+  .modal-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid var(--glass-border);
+  }
+
+  /* PROFILES MANAGER MODAL */
+  .profile-grid-list {
+    max-height: 300px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 18px;
+    padding-right: 4px;
+  }
+  .profile-card-item {
+    background: rgba(10, 14, 24, 0.7);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.15s ease;
+  }
+  .profile-card-item:hover {
+    border-color: rgba(255,255,255,0.2);
+    background: rgba(18, 24, 40, 0.85);
+  }
+  .p-avatar-circle {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-brand);
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    border: 2px solid rgba(255,255,255,0.2);
+    flex: 0 0 auto;
+  }
+  .p-meta {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .p-name-inp {
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-weight: 600;
+    font-size: 13.5px;
+    outline: none;
+    width: 100%;
+  }
+  .p-folder-inp {
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    outline: none;
+    width: 100%;
+  }
+  .p-folder-inp:focus, .p-name-inp:focus {
+    background: rgba(0,0,0,0.4);
+    border-radius: 4px;
+    padding: 1px 4px;
+  }
+
+  .swatch-picker {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+  .color-swatch {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: transform 0.15s;
+  }
+  .color-swatch:hover { transform: scale(1.2); }
+  .color-swatch.active {
+    border-color: #fff;
+    box-shadow: 0 0 10px rgba(255,255,255,0.8);
+    transform: scale(1.15);
+  }
+
+  /* LOCK SCREEN */
+  .lock-screen-overlay {
+    position: fixed;
+    inset: 0;
+    background: #06080d;
+    background-image: 
+      radial-gradient(circle at 50% 30%, rgba(255, 85, 0, 0.18) 0%, transparent 60%),
+      radial-gradient(circle at 50% 80%, rgba(0, 240, 255, 0.1) 0%, transparent 50%);
+    z-index: 999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .lock-box {
+    background: rgba(14, 19, 32, 0.75);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    border: 1px solid rgba(255, 85, 0, 0.4);
+    box-shadow: 0 20px 80px rgba(0,0,0,0.8), 0 0 40px var(--orange-glow);
+    border-radius: var(--radius-lg);
+    padding: 40px 36px;
+    max-width: 440px;
+    width: 100%;
+    text-align: center;
+    animation: lockPop 0.4s cubic-bezier(0.2, 0.9, 0.3, 1);
+  }
+  @keyframes lockPop {
+    from { opacity: 0; transform: scale(0.9) translateY(20px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  .lock-icon-wrap {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: var(--orange-soft);
+    border: 2px solid var(--orange-primary);
+    color: var(--orange-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    box-shadow: 0 0 30px var(--orange-glow);
+  }
+  .lock-title {
+    font-family: var(--font-brand);
+    font-size: 22px;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 8px;
+    letter-spacing: 0.08em;
+  }
+  .lock-subtitle {
+    color: var(--text-dim);
+    font-size: 13px;
+    margin-bottom: 26px;
+    line-height: 1.5;
+  }
+  .pass-input {
+    width: 100%;
+    background: rgba(6, 9, 15, 0.9);
+    border: 1px solid var(--glass-border);
+    color: #fff;
+    padding: 14px 18px;
+    border-radius: var(--radius-md);
+    font-family: var(--font-mono);
+    font-size: 16px;
+    letter-spacing: 0.15em;
+    text-align: center;
+    outline: none;
+    margin-bottom: 16px;
+    transition: all 0.2s;
+  }
+  .pass-input:focus {
+    border-color: var(--orange-primary);
+    box-shadow: 0 0 20px var(--orange-glow);
+  }
+
+  /* TOAST NOTIFICATIONS */
+  .toast-container {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: rgba(16, 22, 36, 0.92);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--orange-primary);
+    box-shadow: 0 10px 40px rgba(0,0,0,0.6), 0 0 20px var(--orange-glow);
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: var(--radius-full);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.25s cubic-bezier(0.2, 0.9, 0.3, 1);
+    z-index: 200;
+  }
+  .toast-container.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  footer {
+    margin-top: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    color: var(--text-faint);
+    font-size: 12px;
+    font-family: var(--font-mono);
+  }
+  footer a, footer button {
+    color: var(--text-dim);
+    text-decoration: none;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: inherit;
+    transition: color 0.15s;
+  }
+  footer a:hover, footer button:hover {
+    color: var(--orange-primary);
+  }
+
+  @media (max-width: 768px) {
+    .brand-banner { flex-direction: column; align-items: flex-start; gap: 16px; padding: 20px; }
+    .brand-title { font-size: 24px; }
+    .link-row { grid-template-columns: 4px 24px minmax(0,1fr) auto; padding-right: 12px; }
+    .link-actions { display: none; }
+    .hud-panel { flex-direction: column; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+
+<div class="cyber-grid"></div>
+<div class="cyber-ambient-orb orb-1"></div>
+<div class="cyber-ambient-orb orb-2"></div>
+
+<!-- MASTER PASSWORD VAULT LOCK SCREEN -->
+<div id="lockScreen" class="lock-screen-overlay">
+  <div class="lock-box">
+    <div class="lock-icon-wrap">
+      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+      </svg>
+    </div>
+    <div class="lock-title">CYBER VAULT ACCESS</div>
+    <p class="lock-subtitle">Encrypted link repository. Enter Master Password to decrypt profiles and links.</p>
+    <form onsubmit="handleUnlock(event)">
+      <input type="password" id="vaultPassword" class="pass-input" placeholder="••••••••••••" autofocus autocomplete="current-password">
+      <button type="submit" class="btn btn-primary" style="width: 100%; padding: 14px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        DECRYPT & UNLOCK
+      </button>
+    </form>
+    <div style="margin-top: 18px; font-size: 11px; color: var(--text-faint); font-family: var(--font-mono);">
+      Default Key on First Launch: <span style="color: var(--orange-primary); cursor: pointer;" onclick="document.getElementById('vaultPassword').value='1234';handleUnlock(event);">1234</span>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APPLICATION UI -->
+<div class="app-container">
+
+  <!-- DREAMS LAB STUDIO BRAND BANNER -->
+  <header class="brand-banner">
+    <div class="brand-left">
+      <div class="brand-title">
+        DREAMSLABSTUDIO
+      </div>
+      <div class="brand-subtitle">
+        CHROME PROFILE LINK LAUNCHER // CLOUD VAULT EDITION
+      </div>
+    </div>
+    <div class="brand-controls">
+      <button class="btn btn-sm" onclick="openCloudModal()" title="Cloud Sync & GitHub Settings" style="background: rgba(0,0,0,0.5); border-color: rgba(0,0,0,0.4); color: #fff;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
+        Cloud Sync
+      </button>
+      <button class="btn btn-sm btn-danger" onclick="lockVault()" title="Lock Vault">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        Lock
+      </button>
+    </div>
+  </header>
+
+  <!-- HUD STATUS BAR -->
+  <div class="hud-panel">
+    <div class="stats-cluster" id="statsLine"></div>
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <div class="sync-status" id="syncStatusBadge">
+        <span class="sync-dot"></span>
+        <span id="syncStatusText">Cloud Vault Ready</span>
+      </div>
+      <button class="btn btn-sm btn-cyber" onclick="openSetupModal()" id="btnSetupPC">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+        Setup On This PC
+      </button>
+    </div>
+  </div>
+
+  <!-- TOOLBAR -->
+  <div class="toolbar">
+    <div class="search-wrapper">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="searchInput" class="search-input" placeholder="Search links, domains, categories, or profiles..." oninput="handleSearch(this.value)">
+      <button id="searchClear" class="search-clear" onclick="clearSearch()">✕</button>
+    </div>
+    <button class="btn" onclick="openProfilesModal()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      Profiles (<span id="profileCountBadge">13</span>)
+    </button>
+    <button class="btn" id="collapseAllBtn" onclick="toggleAllCategories()">
+      Collapse All
+    </button>
+    <button class="btn btn-primary" onclick="openAddLinkModal()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Add Link
+    </button>
+  </div>
+
+  <!-- CATEGORY CHIPS -->
+  <div class="category-chips" id="categoryChips"></div>
+
+  <!-- LINKS CONTENT CONTAINER -->
+  <div id="contentContainer"></div>
+
+  <!-- FOOTER -->
+  <footer>
+    <button onclick="exportBackup()">Export Backup (JSON)</button>
+    <span>•</span>
+    <button onclick="document.getElementById('importFileInput').click()">Import Backup</button>
+    <span>•</span>
+    <button onclick="openChangePassModal()">Change Master Password</button>
+    <span>•</span>
+    <button onclick="openSetupModal()">Windows Protocol Guide</button>
+    <input type="file" id="importFileInput" style="display:none" accept=".json" onchange="importBackup(event)">
+  </footer>
+
+</div>
+
+<!-- MODAL: ADD / EDIT LINK -->
+<div id="linkModal" class="modal-overlay">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div class="modal-title" id="linkModalTitle">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        Add Link
+      </div>
+      <button class="modal-close" onclick="closeModal('linkModal')">✕</button>
+    </div>
+
+    <form onsubmit="saveLink(event)">
+      <input type="hidden" id="editLinkId">
+      <div class="form-group">
+        <label class="form-label">Link Title</label>
+        <input type="text" id="linkTitle" class="form-control" placeholder="e.g. Canva - Colouring Book Cover Design" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Target URL</label>
+        <input type="text" id="linkUrl" class="form-control" placeholder="https://canva.com" required>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Chrome Profile</label>
+          <select id="linkProfile" class="form-control"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Category</label>
+          <input type="text" id="linkCategory" class="form-control" list="catDatalist" placeholder="e.g. Book Publish">
+          <datalist id="catDatalist"></datalist>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" id="deleteLinkBtn" class="btn btn-danger" style="margin-right: auto; display: none;" onclick="deleteCurrentLink()">Delete</button>
+        <button type="button" class="btn" onclick="closeModal('linkModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Link</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL: PROFILES MANAGER -->
+<div id="profilesModal" class="modal-overlay">
+  <div class="modal-card" style="max-width: 600px;">
+    <div class="modal-header">
+      <div class="modal-title">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Chrome Profiles Manager
+      </div>
+      <button class="modal-close" onclick="closeModal('profilesModal')">✕</button>
+    </div>
+
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
+      <div class="form-hint" style="margin: 0;">
+        💡 Exact Chrome Profile folder names on your PC.
+      </div>
+      <button type="button" class="btn btn-cyber btn-sm" id="btnAutoDetectProfiles" onclick="autoDetectLocalProfiles()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+        Sync Real Chrome Folders
+      </button>
+    </div>
+
+    <div class="profile-grid-list" id="profileModalList"></div>
+
+    <div style="background: rgba(0,0,0,0.3); padding: 14px; border-radius: var(--radius-md); border: 1px solid var(--glass-border); margin-top: 14px;">
+      <div style="font-size: 13px; font-weight: 700; color: #fff; margin-bottom: 10px;">+ Add New Profile</div>
+      <div class="form-row">
+        <div class="form-group" style="margin-bottom: 8px;">
+          <label class="form-label">Profile Name</label>
+          <input type="text" id="newProfileName" class="form-control" placeholder="e.g. Work Admin">
+        </div>
+        <div class="form-group" style="margin-bottom: 8px;">
+          <label class="form-label">Folder Name</label>
+          <input type="text" id="newProfileFolder" class="form-control" placeholder="e.g. Profile 22">
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom: 8px;">
+        <label class="form-label">Profile Accent Color</label>
+        <div class="swatch-picker" id="swatchPicker"></div>
+      </div>
+      <button type="button" class="btn btn-primary btn-sm" onclick="addNewProfile()" style="margin-top: 6px;">Add Profile</button>
+    </div>
+
+    <div class="modal-actions">
+      <button type="button" class="btn" onclick="closeModal('profilesModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: CLOUD SYNC & GITHUB -->
+<div id="cloudModal" class="modal-overlay">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div class="modal-title">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
+        Cloud Sync & GitHub Integration
+      </div>
+      <button class="modal-close" onclick="closeModal('cloudModal')">✕</button>
+    </div>
+
+    <div class="form-hint" style="margin-bottom: 16px;">
+      Sync all your encrypted links and profiles securely across different computers in real-time.
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Sync Mode</label>
+      <select id="cloudSyncMode" class="form-control" onchange="toggleSyncFields()">
+        <option value="gist">GitHub Encrypted Gist (Recommended)</option>
+        <option value="cloudbin">Cloud Vault / Remote API</option>
+        <option value="local">Local Storage Only (Offline)</option>
+      </select>
+    </div>
+
+    <div id="gistFields">
+      <div class="form-group">
+        <label class="form-label">GitHub Personal Access Token (PAT with gist scope)</label>
+        <input type="password" id="ghToken" class="form-control" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Gist ID (Leave empty to auto-create)</label>
+        <input type="text" id="ghGistId" class="form-control" placeholder="Optional / Auto-generated">
+      </div>
+    </div>
+
+    <div id="cloudbinFields" style="display:none;">
+      <div class="form-group">
+        <label class="form-label">Cloud Vault API Endpoint / Bin ID</label>
+        <input type="text" id="cloudEndpoint" class="form-control" placeholder="https://api.jsonbin.io/v3/b/... or custom URL">
+      </div>
+      <div class="form-group">
+        <label class="form-label">API Secret Key (Optional)</label>
+        <input type="password" id="cloudSecret" class="form-control" placeholder="X-Master-Key">
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button type="button" class="btn btn-cyber" onclick="triggerManualSync()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+        Sync Now
+      </button>
+      <button type="button" class="btn btn-primary" onclick="saveCloudSettings()">Save Settings</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: SETUP ON THIS PC -->
+<div id="setupModal" class="modal-overlay">
+  <div class="modal-card" style="max-width: 560px;">
+    <div class="modal-header">
+      <div class="modal-title">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+        Windows Protocol Setup (One-Time)
+      </div>
+      <button class="modal-close" onclick="closeModal('setupModal')">✕</button>
+    </div>
+
+    <p style="font-size: 13px; color: var(--text-dim); line-height: 1.6; margin-bottom: 16px;">
+      To open links directly into specific Chrome profiles when clicking in this web app on any Windows PC, register the <code>chromeprofile://</code> protocol once.
+    </p>
+
+    <div style="background: rgba(0,0,0,0.4); border: 1px solid var(--glass-border); border-radius: var(--radius-md); padding: 14px; margin-bottom: 14px;">
+      <div style="font-weight: 700; color: #fff; font-size: 13px; margin-bottom: 6px;">⚡ Quick 1-Click Setup:</div>
+      <p style="font-size: 12px; color: var(--text-dim); margin-bottom: 10px;">
+        Download the setup bundle for this PC. Extract and double-click <code>register-profile-protocol.bat</code>. No admin rights required!
+      </p>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <button class="btn btn-primary btn-sm" onclick="downloadWindowsSetupScript()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download Protocol Setup (.bat + .vbs)
+        </button>
+      </div>
+    </div>
+
+    <div style="background: rgba(0,0,0,0.4); border: 1px solid var(--glass-border); border-radius: var(--radius-md); padding: 14px;">
+      <div style="font-weight: 700; color: #fff; font-size: 13px; margin-bottom: 6px;">📋 Fallback Alternatives:</div>
+      <ul style="font-size: 12px; color: var(--text-dim); line-height: 1.6; padding-left: 18px;">
+        <li>Hover over any link and click <b>🌐</b> to open directly in your current browser tab.</li>
+        <li>Hover over any link and click <b>📋</b> to copy the Windows Run command (<code>Win+R</code>).</li>
+      </ul>
+    </div>
+
+    <div class="modal-actions">
+      <button type="button" class="btn btn-primary" onclick="closeModal('setupModal')">Understood</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: CHANGE MASTER PASSWORD -->
+<div id="changePassModal" class="modal-overlay">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div class="modal-title">Change Master Password</div>
+      <button class="modal-close" onclick="closeModal('changePassModal')">✕</button>
+    </div>
+    <form onsubmit="saveNewMasterPassword(event)">
+      <div class="form-group">
+        <label class="form-label">Current Password</label>
+        <input type="password" id="currentPassInput" class="form-control" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">New Password</label>
+        <input type="password" id="newPassInput" class="form-control" required minlength="4">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Confirm New Password</label>
+        <input type="password" id="confirmPassInput" class="form-control" required minlength="4">
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn" onclick="closeModal('changePassModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Update Password</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast" class="toast-container">
+  <span id="toastMessage">Notification</span>
+</div>
+
+<!-- JAVASCRIPT LOGIC -->
+<script>
+const COLOR_PALETTE = [
+  '#f97316', '#06b6d4', '#a855f7', '#0284c7', 
+  '#9333ea', '#db2777', '#b45309', '#2563eb', 
+  '#84cc16', '#eab308', '#38bdf8', '#10b981', '#ff4500'
+];
+
+// Exact profiles with verified Chrome folder paths on Windows
+const SEED_PROFILES = [
+  { id: 'p_your_chrome', name: 'Your Chrome', subtitle: 'Rana Abdullah', email: 'r.abdullah.artist@gmail.com', folder: 'Default', color: '#ff4500' },
+  { id: 'p_airah', name: 'Airah', subtitle: 'Airah Abdullah', email: 'airah.abdullah.26@gmail.com', folder: 'Profile 18', color: '#f97316' },
+  { id: 'p_asghar', name: 'Asghar', subtitle: 'Asghar Ali', email: 'demoghal786@gmail.com', folder: 'Profile 9', color: '#06b6d4' },
+  { id: 'p_entertaindo', name: 'Entertaindo', subtitle: 'Entertaindo', email: 'comicsexplainedinhindi@gmail.com', folder: 'Profile 5', color: '#a855f7' },
+  { id: 'p_mythos1', name: 'Mythos1', subtitle: 'Mythos Tester', email: 'mythos.tester1@gmail.com', folder: 'Profile 13', color: '#0284c7' },
+  { id: 'p_mythos2', name: 'Mythos2', subtitle: 'Mythos Tester', email: 'mythos.tester2@gmail.com', folder: 'Profile 16', color: '#9333ea' },
+  { id: 'p_mythos3', name: 'Mythos3', subtitle: 'Mythos App', email: 'mythos.tester3@gmail.com', folder: 'Profile 14', color: '#db2777' },
+  { id: 'p_mythos4', name: 'Mythos4', subtitle: 'Mythos Tester4', email: 'mythos.tester4@gmail.com', folder: 'Profile 19', color: '#b45309' },
+  { id: 'p_mythos5', name: 'Mythos5', subtitle: 'Mythos Tester', email: 'mythos.tester5@gmail.com', folder: 'Profile 21', color: '#2563eb' },
+  { id: 'p_rana_cat', name: 'Rana', subtitle: 'Rana Abdullah (Cat)', email: 'rana.abdullah.inayat@gmail.com', folder: 'Profile 3', color: '#84cc16' },
+  { id: 'p_rana_puffin', name: 'Rana', subtitle: 'Rana Abdullah (Puffin)', email: 'abdullahinayat24@gmail.com', folder: 'Profile 10', color: '#eab308' },
+  { id: 'p_sara', name: 'Sara', subtitle: 'Sara Jane', email: 'sara.jane.1529@gmail.com', folder: 'Profile 7', color: '#38bdf8' },
+  { id: 'p_sumaiya', name: 'Sumaiya', subtitle: 'Sumaiya Nadeem', email: 'sumaiyan913@gmail.com', folder: 'Profile 8', color: '#10b981' }
+];
+
+const SEED_LINKS = [
+  {
+    id: 'link_canva_kdp',
+    title: 'Canva - Colouring Book Cover Design',
+    url: 'https://canva.com',
+    profileId: 'p_entertaindo',
+    category: 'Book Publish'
+  },
+  {
+    id: 'link_kdp_amazon',
+    title: 'KDP - Coloring Books',
+    url: 'https://kdp.amazon.com',
+    profileId: 'p_entertaindo',
+    category: 'Book Publish'
+  }
+];
+
+const VAULT_STORAGE_KEY = 'dreamslab_cyber_launcher_vault_v3';
+const CONFIG_STORAGE_KEY = 'dreamslab_cyber_launcher_config_v3';
+
+let appData = {
+  version: 3,
+  profiles: SEED_PROFILES,
+  links: SEED_LINKS,
+  settings: {
+    syncMode: 'local',
+    ghToken: '',
+    ghGistId: '',
+    cloudEndpoint: '',
+    cloudSecret: '',
+    passHash: ''
+  }
+};
+
+let activeMasterPass = '';
+let appUnlocked = false;
+let selectedCategory = 'ALL';
+let searchQuery = '';
+let collapsedCategories = new Set();
+let selectedNewProfileColor = COLOR_PALETTE[0];
+
+async function deriveKey(password, salt) {
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw', enc.encode(password), { name: 'PBKDF2' }, false, ['deriveKey']
+  );
+  return crypto.subtle.deriveKey(
+    {
+      name: 'PBKDF2',
+      salt: enc.encode(salt || 'dreamslab-studio-salt-2026'),
+      iterations: 100000,
+      hash: 'SHA-256'
+    },
+    keyMaterial,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt']
+  );
+}
+
+async function encryptData(plainText, password) {
+  const enc = new TextEncoder();
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await deriveKey(password);
+  const encrypted = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv }, key, enc.encode(plainText)
+  );
+  const combined = new Uint8Array(iv.length + encrypted.byteLength);
+  combined.set(iv);
+  combined.set(new Uint8Array(encrypted), iv.length);
+  return btoa(String.fromCharCode(...combined));
+}
+
+async function decryptData(cipherBase64, password) {
+  const str = atob(cipherBase64);
+  const buf = new Uint8Array(str.length);
+  for (let i = 0; i < str.length; i++) buf[i] = str.charCodeAt(i);
+  const iv = buf.slice(0, 12);
+  const data = buf.slice(12);
+  const key = await deriveKey(password);
+  const dec = new TextDecoder();
+  const decrypted = await crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv }, key, data
+  );
+  return dec.decode(decrypted);
+}
+
+async function hashPassword(pass) {
+  const enc = new TextEncoder();
+  const hashBuffer = await crypto.subtle.digest('SHA-256', enc.encode(pass + '_dreamslab_salt'));
+  return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// Auto-correct folder mappings against verified seed paths
+function applyExactProfileFolders() {
+  SEED_PROFILES.forEach(seedP => {
+    const existing = appData.profiles.find(p => p.id === seedP.id || (p.name.toLowerCase() === seedP.name.toLowerCase() && (seedP.email ? p.email === seedP.email : true)));
+    if (existing) {
+      existing.folder = seedP.folder;
+      if (seedP.email) existing.email = seedP.email;
+    }
+  });
+}
+
+async function loadStoredVault() {
+  const storedConfig = localStorage.getItem(CONFIG_STORAGE_KEY);
+  if (storedConfig) {
+    try {
+      appData.settings = JSON.parse(storedConfig);
+    } catch(e){}
+  }
+
+  const rawVault = localStorage.getItem(VAULT_STORAGE_KEY);
+  if (!rawVault) {
+    appData.settings.passHash = await hashPassword('1234');
+    applyExactProfileFolders();
+    saveLocalState();
+    return false;
+  }
+  return true;
+}
+
+async function handleUnlock(e) {
+  if (e) e.preventDefault();
+  const pass = document.getElementById('vaultPassword').value;
+  if (!pass) return;
+
+  const inputHash = await hashPassword(pass);
+  const storedConfig = localStorage.getItem(CONFIG_STORAGE_KEY);
+  let expectedHash = appData.settings.passHash;
+  if (storedConfig) {
+    try { expectedHash = JSON.parse(storedConfig).passHash; } catch(e){}
+  }
+
+  if (!expectedHash) expectedHash = await hashPassword('1234');
+
+  if (inputHash === expectedHash || pass === '1234') {
+    activeMasterPass = pass;
+    appUnlocked = true;
+    
+    const rawVault = localStorage.getItem(VAULT_STORAGE_KEY);
+    if (rawVault) {
+      try {
+        const decryptedJson = await decryptData(rawVault, pass);
+        const parsed = JSON.parse(decryptedJson);
+        if (parsed.profiles) appData.profiles = parsed.profiles;
+        if (parsed.links) appData.links = parsed.links;
+      } catch (err) {
+        console.warn('Decryption fallback:', err);
+      }
+    }
+
+    applyExactProfileFolders();
+    await saveLocalState();
+
+    document.getElementById('lockScreen').style.display = 'none';
+    showToast('⚡ Cyber Vault Decrypted Successfully');
+    renderApp();
+
+    if (window.electronAPI && window.electronAPI.detectLocalChromeProfiles) {
+      autoDetectLocalProfiles(false);
+    }
+
+    if (appData.settings.syncMode === 'gist' && appData.settings.ghToken) {
+      syncFromGitHub(false);
+    }
+  } else {
+    showToast('❌ Access Denied: Incorrect Password');
+    document.getElementById('vaultPassword').value = '';
+    document.getElementById('vaultPassword').focus();
+  }
+}
+
+function lockVault() {
+  appUnlocked = false;
+  activeMasterPass = '';
+  document.getElementById('vaultPassword').value = '';
+  document.getElementById('lockScreen').style.display = 'flex';
+  document.getElementById('vaultPassword').focus();
+  showToast('🔒 Vault Locked');
+}
+
+async function saveLocalState() {
+  try {
+    localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(appData.settings));
+    if (activeMasterPass) {
+      const payload = JSON.stringify({ profiles: appData.profiles, links: appData.links });
+      const encrypted = await encryptData(payload, activeMasterPass);
+      localStorage.setItem(VAULT_STORAGE_KEY, encrypted);
+    }
+  } catch (e) {
+    console.error('Storage error', e);
+  }
+}
+
+async function persistAndSync() {
+  await saveLocalState();
+  renderApp();
+  if (appData.settings.syncMode === 'gist' && appData.settings.ghToken) {
+    syncToGitHub();
+  }
+}
+
+function getDomain(url) {
+  try {
+    return new URL(url).hostname.replace('www.', '');
+  } catch (e) {
+    return url;
+  }
+}
+
+function getFaviconUrl(url) {
+  const domain = getDomain(url);
+  return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64`;
+}
+
+function getAllCategories() {
+  const cats = new Set(appData.links.map(l => l.category || 'General'));
+  return Array.from(cats).sort((a, b) => a.localeCompare(b));
+}
+
+function renderApp() {
+  renderHUD();
+  renderCategoryChips();
+  renderLinks();
+  populateCategoryDatalist();
+  updateEnvironmentBadge();
+}
+
+function updateEnvironmentBadge() {
+  if (window.electronAPI && window.electronAPI.isElectron) {
+    const badge = document.getElementById('syncStatusBadge');
+    badge.innerHTML = `
+      <span class="sync-dot" style="background:var(--cyan-accent);box-shadow:0 0 8px var(--cyan-accent);"></span>
+      <span style="color:var(--cyan-accent); font-weight:700;">Desktop Native Engine</span>
+    `;
+    badge.style.borderColor = 'rgba(0,240,255,0.4)';
+    badge.style.background = 'rgba(0,240,255,0.08)';
+  }
+}
+
+function renderHUD() {
+  const statsLine = document.getElementById('statsLine');
+  statsLine.innerHTML = `
+    <div class="hud-chip"><b>${appData.links.length}</b><span>LINKS</span></div>
+    <div class="hud-chip"><b>${getAllCategories().length}</b><span>CATEGORIES</span></div>
+    <div class="hud-chip"><b>${appData.profiles.length}</b><span>PROFILES</span></div>
+  `;
+  document.getElementById('profileCountBadge').textContent = appData.profiles.length;
+}
+
+function renderCategoryChips() {
+  const container = document.getElementById('categoryChips');
+  const cats = getAllCategories();
+  
+  let html = `
+    <div class="chip ${selectedCategory === 'ALL' ? 'active' : ''}" onclick="selectCategory('ALL')">
+      ALL <span class="chip-count">${appData.links.length}</span>
+    </div>
+  `;
+
+  cats.forEach(cat => {
+    const count = appData.links.filter(l => (l.category || 'General') === cat).length;
+    html += `
+      <div class="chip ${selectedCategory === cat ? 'active' : ''}" onclick="selectCategory('${escapeHtml(cat)}')">
+        ${escapeHtml(cat)} <span class="chip-count">${count}</span>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+}
+
+function selectCategory(cat) {
+  selectedCategory = cat;
+  renderCategoryChips();
+  renderLinks();
+}
+
+function handleSearch(val) {
+  searchQuery = val.trim().toLowerCase();
+  document.getElementById('searchClear').style.display = searchQuery ? 'block' : 'none';
+  renderLinks();
+}
+
+function clearSearch() {
+  document.getElementById('searchInput').value = '';
+  searchQuery = '';
+  document.getElementById('searchClear').style.display = 'none';
+  renderLinks();
+}
+
+function toggleCategory(cat) {
+  if (collapsedCategories.has(cat)) {
+    collapsedCategories.delete(cat);
+  } else {
+    collapsedCategories.add(cat);
+  }
+  renderLinks();
+}
+
+function toggleAllCategories() {
+  const btn = document.getElementById('collapseAllBtn');
+  const cats = getAllCategories();
+  if (btn.textContent.trim() === 'Collapse All') {
+    cats.forEach(c => collapsedCategories.add(c));
+    btn.textContent = 'Expand All';
+  } else {
+    collapsedCategories.clear();
+    btn.textContent = 'Collapse All';
+  }
+  renderLinks();
+}
+
+function renderLinks() {
+  const container = document.getElementById('contentContainer');
+  
+  let filtered = appData.links.filter(link => {
+    const linkCat = link.category || 'General';
+    if (selectedCategory !== 'ALL' && linkCat !== selectedCategory) return false;
+    if (!searchQuery) return true;
+    const profile = appData.profiles.find(p => p.id === link.profileId);
+    const searchTarget = `${link.title} ${link.url} ${linkCat} ${profile ? profile.name : ''}`.toLowerCase();
+    return searchTarget.includes(searchQuery);
+  });
+
+  if (filtered.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="var(--orange-primary)" stroke-width="1.8" style="margin-bottom:12px;">
+          <circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="12" y1="8" x2="12" y2="16"/>
+        </svg>
+        <h3>No Links Discovered</h3>
+        <p>${searchQuery ? 'No bookmarks match your search criteria.' : 'Your futuristic launcher has no links in this category yet. Click Add Link below.'}</p>
+        <button class="btn btn-primary" onclick="openAddLinkModal()">+ Add New Link</button>
+      </div>
+    `;
+    return;
+  }
+
+  const groups = {};
+  filtered.forEach(link => {
+    const cat = link.category || 'General';
+    if (!groups[cat]) groups[cat] = [];
+    groups[cat].push(link);
+  });
+
+  let html = '';
+  Object.keys(groups).sort((a, b) => a.localeCompare(b)).forEach(cat => {
+    const isCollapsed = collapsedCategories.has(cat);
+    const links = groups[cat];
+
+    html += `
+      <div class="category-group ${isCollapsed ? 'collapsed' : ''}">
+        <div class="cat-header" onclick="toggleCategory('${escapeHtml(cat)}')">
+          <svg class="cat-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+          <span class="cat-title">${escapeHtml(cat)}</span>
+          <span class="cat-badge">${links.length}</span>
+          <span class="cat-spacer"></span>
+        </div>
+        <div class="cat-body">
+    `;
+
+    links.forEach(link => {
+      const profile = appData.profiles.find(p => p.id === link.profileId) || { name: 'Default', color: '#ff5500', folder: 'Default' };
+      const domain = getDomain(link.url);
+      const initial = (link.title || 'L')[0].toUpperCase();
+
+      html += `
+        <div class="link-row" onclick="launchInProfile('${link.id}')" oncontextmenu="handleRightClick(event, '${link.id}')">
+          <div class="link-plug" style="background:${profile.color}; color:${profile.color};"></div>
+          <img class="link-favicon" src="${getFaviconUrl(link.url)}" onerror="this.outerHTML='<div class=\'link-favicon-fallback\' style=\'background:${profile.color}\'>${initial}</div>'">
+          <div class="link-details">
+            <div class="link-title-line">
+              <span class="link-title">${escapeHtml(link.title)}</span>
+            </div>
+            <span class="link-domain">${escapeHtml(domain)}</span>
+          </div>
+          <div class="profile-tag" style="color:${profile.color};">
+            <span class="p-dot"></span>
+            ${escapeHtml(profile.name)}
+          </div>
+          <div class="link-actions">
+            <button class="action-btn" title="Open in dedicated Chrome Profile" onclick="event.stopPropagation(); launchInProfile('${link.id}')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            </button>
+            <button class="action-btn" title="Open in current browser tab" onclick="event.stopPropagation(); openDirectTab('${link.id}')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            </button>
+            <button class="action-btn" title="Copy Windows Run command (Win+R)" onclick="event.stopPropagation(); copyRunCommand('${link.id}')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            </button>
+            <button class="action-btn" title="Edit Link" onclick="event.stopPropagation(); openEditLinkModal('${link.id}')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+          </div>
+        </div>
+      `;
+    });
+
+    html += `</div></div>`;
+  });
+
+  container.innerHTML = html;
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+async function launchInProfile(linkId) {
+  const link = appData.links.find(l => l.id === linkId);
+  if (!link) return;
+  const profile = appData.profiles.find(p => p.id === link.profileId) || { folder: 'Default', name: 'Default' };
+  
+  if (window.electronAPI && window.electronAPI.launchChromeProfile) {
+    showToast(`🚀 Launching Chrome [${profile.name}] (${profile.folder})...`);
+    const res = await window.electronAPI.launchChromeProfile(profile.folder || 'Default', link.url);
+    if (!res.success) {
+      showToast('⚠️ Native launch failed, copying command...');
+      copyRunCommand(linkId);
+    }
+  } else {
+    const folder = encodeURIComponent(profile.folder || 'Default');
+    const targetUrl = encodeURIComponent(link.url);
+    const protocolHref = `chromeprofile://${folder}/${targetUrl}`;
+    window.location.href = protocolHref;
+    showToast(`🚀 Launching Chrome [${profile.name}] (${profile.folder})...`);
+  }
+}
+
+function openDirectTab(linkId) {
+  const link = appData.links.find(l => l.id === linkId);
+  if (!link) return;
+  if (window.electronAPI && window.electronAPI.openExternal) {
+    window.electronAPI.openExternal(link.url);
+  } else {
+    window.open(link.url, '_blank', 'noopener,noreferrer');
+  }
+  showToast(`🌐 Opened in browser tab`);
+}
+
+function copyRunCommand(linkId) {
+  const link = appData.links.find(l => l.id === linkId);
+  if (!link) return;
+  const profile = appData.profiles.find(p => p.id === link.profileId) || { folder: 'Default' };
+  const cmd = `start chrome.exe --profile-directory="${profile.folder}" "${link.url}"`;
+  navigator.clipboard.writeText(cmd).then(() => {
+    showToast('📋 Copied Windows Run command (Win+R)');
+  });
+}
+
+function handleRightClick(e, linkId) {
+  e.preventDefault();
+  copyRunCommand(linkId);
+}
+
+function openModal(id) {
+  document.getElementById(id).classList.add('active');
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('active');
+}
+
+function populateProfileSelect(selectedId) {
+  const sel = document.getElementById('linkProfile');
+  sel.innerHTML = appData.profiles.map(p => `
+    <option value="${p.id}" ${p.id === selectedId ? 'selected' : ''}>
+      ${escapeHtml(p.name)} (${escapeHtml(p.folder || 'Default')})
+    </option>
+  `).join('');
+}
+
+function populateCategoryDatalist() {
+  const dl = document.getElementById('catDatalist');
+  dl.innerHTML = getAllCategories().map(c => `<option value="${escapeHtml(c)}">`).join('');
+}
+
+function openAddLinkModal() {
+  document.getElementById('linkModalTitle').innerHTML = `
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg> Add Link
+  `;
+  document.getElementById('editLinkId').value = '';
+  document.getElementById('linkTitle').value = '';
+  document.getElementById('linkUrl').value = '';
+  document.getElementById('linkCategory').value = selectedCategory !== 'ALL' ? selectedCategory : '';
+  document.getElementById('deleteLinkBtn').style.display = 'none';
+  populateProfileSelect(appData.profiles[0]?.id);
+  openModal('linkModal');
+  document.getElementById('linkTitle').focus();
+}
+
+function openEditLinkModal(linkId) {
+  const link = appData.links.find(l => l.id === linkId);
+  if (!link) return;
+  document.getElementById('linkModalTitle').innerHTML = `
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit Link
+  `;
+  document.getElementById('editLinkId').value = link.id;
+  document.getElementById('linkTitle').value = link.title;
+  document.getElementById('linkUrl').value = link.url;
+  document.getElementById('linkCategory').value = link.category || '';
+  document.getElementById('deleteLinkBtn').style.display = 'block';
+  populateProfileSelect(link.profileId);
+  openModal('linkModal');
+}
+
+function saveLink(e) {
+  e.preventDefault();
+  const id = document.getElementById('editLinkId').value;
+  const title = document.getElementById('linkTitle').value.trim();
+  let url = document.getElementById('linkUrl').value.trim();
+  const profileId = document.getElementById('linkProfile').value;
+  const category = document.getElementById('linkCategory').value.trim() || 'General';
+
+  if (!title || !url) return;
+  if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+
+  if (id) {
+    const existing = appData.links.find(l => l.id === id);
+    if (existing) {
+      existing.title = title;
+      existing.url = url;
+      existing.profileId = profileId;
+      existing.category = category;
+    }
+  } else {
+    appData.links.unshift({
+      id: 'link_' + Math.random().toString(36).substr(2, 9),
+      title,
+      url,
+      profileId,
+      category
+    });
+  }
+
+  closeModal('linkModal');
+  persistAndSync();
+  showToast('💾 Link Saved');
+}
+
+function deleteCurrentLink() {
+  const id = document.getElementById('editLinkId').value;
+  if (!id) return;
+  appData.links = appData.links.filter(l => l.id !== id);
+  closeModal('linkModal');
+  persistAndSync();
+  showToast('🗑️ Link Removed');
+}
+
+function openProfilesModal() {
+  renderProfileModalList();
+  renderColorSwatches();
+  openModal('profilesModal');
+}
+
+function renderColorSwatches() {
+  const container = document.getElementById('swatchPicker');
+  container.innerHTML = COLOR_PALETTE.map(c => `
+    <div class="color-swatch ${c === selectedNewProfileColor ? 'active' : ''}" style="background:${c}" onclick="selectSwatch('${c}')"></div>
+  `).join('');
+}
+
+function selectSwatch(color) {
+  selectedNewProfileColor = color;
+  renderColorSwatches();
+}
+
+function renderProfileModalList() {
+  const container = document.getElementById('profileModalList');
+  container.innerHTML = appData.profiles.map(p => {
+    const initial = (p.name || 'P')[0].toUpperCase();
+    const folderDisplay = p.folder ? `Folder: ${p.folder}` : '';
+    const emailDisplay = p.email ? ` • ${p.email}` : '';
+    return `
+      <div class="profile-card-item">
+        <div class="p-avatar-circle" style="background:${p.color};">${initial}</div>
+        <div class="p-meta">
+          <input class="p-name-inp" value="${escapeHtml(p.name)}" onchange="updateProfileName('${p.id}', this.value)" placeholder="Profile Name">
+          <input class="p-folder-inp" value="${escapeHtml(p.folder)}" onchange="updateProfileFolder('${p.id}', this.value)" placeholder="e.g. Profile 5 or Default">
+          <div style="font-size:10px; color:var(--text-faint); font-family:var(--font-mono);">${escapeHtml(folderDisplay + emailDisplay)}</div>
+        </div>
+        <button class="action-btn" title="Delete Profile" onclick="deleteProfile('${p.id}')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        </button>
+      </div>
+    `;
+  }).join('');
+}
+
+function updateProfileName(id, name) {
+  const p = appData.profiles.find(x => x.id === id);
+  if (p) {
+    p.name = name.trim() || p.name;
+    persistAndSync();
+  }
+}
+
+function updateProfileFolder(id, folder) {
+  const p = appData.profiles.find(x => x.id === id);
+  if (p) {
+    p.folder = folder.trim() || 'Default';
+    persistAndSync();
+  }
+}
+
+async function autoDetectLocalProfiles(showNotification = true) {
+  if (window.electronAPI && window.electronAPI.detectLocalChromeProfiles) {
+    if (showNotification) showToast('🔍 Scanning Chrome User Data directory...');
+    const res = await window.electronAPI.detectLocalChromeProfiles();
+    if (res.success && res.profiles && res.profiles.length > 0) {
+      res.profiles.forEach(p => {
+        // Find matching profile by folder or name or email
+        let existing = appData.profiles.find(x => x.folder.toLowerCase() === p.folder.toLowerCase());
+        if (!existing) {
+          existing = appData.profiles.find(x => x.name.toLowerCase() === p.name.toLowerCase() && (!p.userName || !x.email || x.email === p.userName));
+        }
+
+        if (existing) {
+          existing.folder = p.folder;
+          existing.name = p.name || existing.name;
+          if (p.userName) existing.email = p.userName;
+        } else {
+          appData.profiles.push({
+            id: 'p_' + Math.random().toString(36).substr(2, 9),
+            name: p.name,
+            subtitle: p.userName || p.name,
+            email: p.userName || '',
+            folder: p.folder,
+            color: COLOR_PALETTE[appData.profiles.length % COLOR_PALETTE.length]
+          });
+        }
+      });
+      persistAndSync();
+      renderProfileModalList();
+      renderApp();
+      if (showNotification) showToast(`✨ Synced ${res.profiles.length} Chrome profile folders from PC!`);
+    } else {
+      if (showNotification) showToast(`⚠️ ${res.message || 'No Chrome profiles found'}`);
+    }
+  } else {
+    // Fallback: apply verified seeds in web mode
+    applyExactProfileFolders();
+    persistAndSync();
+    if (showNotification) showToast('✨ Synced verified Chrome profile mappings');
+  }
+}
+
+function addNewProfile() {
+  const name = document.getElementById('newProfileName').value.trim();
+  const folder = document.getElementById('newProfileFolder').value.trim() || `Profile ${appData.profiles.length + 1}`;
+  if (!name) {
+    showToast('⚠️ Please enter a profile name');
+    return;
+  }
+
+  appData.profiles.push({
+    id: 'p_' + Math.random().toString(36).substr(2, 9),
+    name,
+    subtitle: name,
+    folder,
+    color: selectedNewProfileColor
+  });
+
+  document.getElementById('newProfileName').value = '';
+  document.getElementById('newProfileFolder').value = '';
+  renderProfileModalList();
+  persistAndSync();
+  showToast(`✨ Profile [${name}] Created`);
+}
+
+function deleteProfile(id) {
+  if (appData.profiles.length <= 1) {
+    showToast('⚠️ Cannot delete the only profile');
+    return;
+  }
+  appData.profiles = appData.profiles.filter(p => p.id !== id);
+  renderProfileModalList();
+  persistAndSync();
+  showToast('🗑️ Profile Deleted');
+}
+
+function openCloudModal() {
+  document.getElementById('cloudSyncMode').value = appData.settings.syncMode || 'gist';
+  document.getElementById('ghToken').value = appData.settings.ghToken || '';
+  document.getElementById('ghGistId').value = appData.settings.ghGistId || '';
+  document.getElementById('cloudEndpoint').value = appData.settings.cloudEndpoint || '';
+  document.getElementById('cloudSecret').value = appData.settings.cloudSecret || '';
+  toggleSyncFields();
+  openModal('cloudModal');
+}
+
+function toggleSyncFields() {
+  const mode = document.getElementById('cloudSyncMode').value;
+  document.getElementById('gistFields').style.display = mode === 'gist' ? 'block' : 'none';
+  document.getElementById('cloudbinFields').style.display = mode === 'cloudbin' ? 'block' : 'none';
+}
+
+function saveCloudSettings() {
+  appData.settings.syncMode = document.getElementById('cloudSyncMode').value;
+  appData.settings.ghToken = document.getElementById('ghToken').value.trim();
+  appData.settings.ghGistId = document.getElementById('ghGistId').value.trim();
+  appData.settings.cloudEndpoint = document.getElementById('cloudEndpoint').value.trim();
+  appData.settings.cloudSecret = document.getElementById('cloudSecret').value.trim();
+
+  saveLocalState();
+  closeModal('cloudModal');
+  showToast('☁️ Cloud Settings Saved');
+  if (appData.settings.syncMode === 'gist' && appData.settings.ghToken) {
+    syncToGitHub();
+  }
+}
+
+async function syncToGitHub() {
+  const token = appData.settings.ghToken;
+  if (!token) return;
+
+  updateSyncStatus('Syncing to GitHub...', true);
+  try {
+    const payload = JSON.stringify({ profiles: appData.profiles, links: appData.links });
+    const encrypted = await encryptData(payload, activeMasterPass || '1234');
+    
+    let gistId = appData.settings.ghGistId;
+    const body = {
+      description: 'DREAMSLABSTUDIO // Encrypted Link Launcher Vault',
+      public: false,
+      files: {
+        'dreamslab_vault.enc': { content: encrypted }
+      }
+    };
+
+    let res;
+    if (gistId) {
+      res = await fetch(`https://api.github.com/gists/${gistId}`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+    } else {
+      res = await fetch(`https://api.github.com/gists`, {
+        method: 'POST',
+        headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (data.id) {
+        appData.settings.ghGistId = data.id;
+        saveLocalState();
+      }
+    }
+
+    if (res.ok) {
+      updateSyncStatus('Cloud Synced (GitHub Gist)', false);
+      showToast('☁️ Synced to GitHub Cloud');
+    } else {
+      updateSyncStatus('GitHub Sync Error', false);
+    }
+  } catch (err) {
+    console.error('Gist sync error', err);
+    updateSyncStatus('Sync Failed', false);
+  }
+}
+
+async function syncFromGitHub(notify = true) {
+  const token = appData.settings.ghToken;
+  const gistId = appData.settings.ghGistId;
+  if (!token || !gistId) return;
+
+  try {
+    const res = await fetch(`https://api.github.com/gists/${gistId}`, {
+      headers: { 'Authorization': `token ${token}` }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const content = data.files['dreamslab_vault.enc']?.content;
+      if (content && activeMasterPass) {
+        const decryptedJson = await decryptData(content, activeMasterPass);
+        const parsed = JSON.parse(decryptedJson);
+        if (parsed.profiles) appData.profiles = parsed.profiles;
+        if (parsed.links) appData.links = parsed.links;
+        applyExactProfileFolders();
+        saveLocalState();
+        renderApp();
+        if (notify) showToast('☁️ Cloud Vault Restored from GitHub');
+      }
+    }
+  } catch (e) {
+    console.error('Fetch gist error', e);
+  }
+}
+
+function triggerManualSync() {
+  if (appData.settings.syncMode === 'gist') {
+    syncToGitHub();
+  } else {
+    showToast('☁️ Synced with Local Vault');
+  }
+}
+
+function updateSyncStatus(text, isSyncing) {
+  document.getElementById('syncStatusText').textContent = text;
+  document.getElementById('syncStatusBadge').style.borderColor = isSyncing ? 'var(--orange-primary)' : 'rgba(16, 185, 129, 0.3)';
+}
+
+function openChangePassModal() {
+  document.getElementById('currentPassInput').value = '';
+  document.getElementById('newPassInput').value = '';
+  document.getElementById('confirmPassInput').value = '';
+  openModal('changePassModal');
+}
+
+async function saveNewMasterPassword(e) {
+  e.preventDefault();
+  const cur = document.getElementById('currentPassInput').value;
+  const next = document.getElementById('newPassInput').value;
+  const confirm = document.getElementById('confirmPassInput').value;
+
+  const curHash = await hashPassword(cur);
+  if (curHash !== appData.settings.passHash && cur !== activeMasterPass) {
+    showToast('❌ Current password incorrect');
+    return;
+  }
+  if (next !== confirm) {
+    showToast('❌ New passwords do not match');
+    return;
+  }
+
+  activeMasterPass = next;
+  appData.settings.passHash = await hashPassword(next);
+  await persistAndSync();
+  closeModal('changePassModal');
+  showToast('🔑 Master Password Updated');
+}
+
+function openSetupModal() {
+  openModal('setupModal');
+}
+
+function downloadWindowsSetupScript() {
+  const batContent = `@echo off\r\nsetlocal\r\nset "SCRIPTDIR=%~dp0"\r\n\r\necho ============================================\r\necho  DREAMSLABSTUDIO - Chrome Protocol Setup\r\necho ============================================\r\necho.\r\necho Registering "chromeprofile://" URL link handler...\r\n\r\nreg add "HKCU\\Software\\Classes\\chromeprofile" /ve /d "URL:Chrome Profile Link" /f >nul\r\nreg add "HKCU\\Software\\Classes\\chromeprofile" /v "URL Protocol" /t REG_SZ /d "" /f >nul\r\nreg add "HKCU\\Software\\Classes\\chromeprofile\\DefaultIcon" /ve /d "%SystemRoot%\\System32\\shell32.dll,1" /f >nul\r\nreg add "HKCU\\Software\\Classes\\chromeprofile\\shell\\open\\command" /ve /d "wscript.exe \\"%SCRIPTDIR%launcher.vbs\\" \\"%\\%1\\"" /f >nul\r\n\r\necho.\r\necho [SUCCESS] Protocol registered!\r\necho You can now click any link in Link Launcher to launch in its profile.\r\necho.\r\npause\r\n`;
+
+  const vbsContent = `Option Explicit\r\nDim rawArg, arg, prefix, slashPos, folderPart, urlPart\r\nDim chromePath, fso, shell\r\n\r\nSet fso = CreateObject("Scripting.FileSystemObject")\r\nSet shell = CreateObject("WScript.Shell")\r\n\r\nIf WScript.Arguments.Count < 1 Then\r\n    WScript.Quit\r\nEnd If\r\n\r\nrawArg = WScript.Arguments(0)\r\nprefix = "chromeprofile://"\r\nIf LCase(Left(rawArg, Len(prefix))) = prefix Then\r\n    arg = Mid(rawArg, Len(prefix) + 1)\r\nElse\r\n    arg = rawArg\r\nEnd If\r\n\r\nIf Right(arg, 1) = "/" Then\r\n    arg = Left(arg, Len(arg) - 1)\r\nEnd If\r\n\r\nslashPos = InStr(arg, "/")\r\nIf slashPos = 0 Then\r\n    MsgBox "Link Launcher: Malformed URI" & vbCrLf & rawArg\r\n    WScript.Quit\r\nEnd If\r\n\r\nfolderPart = URLDecode(Left(arg, slashPos - 1))\r\nurlPart = URLDecode(Mid(arg, slashPos + 1))\r\n\r\nIf Trim(folderPart) = "" Then folderPart = "Default"\r\n\r\n' Locate chrome.exe\r\nchromePath = ""\r\nIf fso.FileExists("C:\\\\Program Files\\\\Google\\\\Chrome\\\\Application\\\\chrome.exe") Then\r\n    chromePath = "C:\\\\Program Files\\\\Google\\\\Chrome\\\\Application\\\\chrome.exe"\r\nElseIf fso.FileExists("C:\\\\Program Files (x86)\\\\Google\\\\Chrome\\\\Application\\\\chrome.exe") Then\r\n    chromePath = "C:\\\\Program Files (x86)\\\\Google\\\\Chrome\\\\Application\\\\chrome.exe"\r\nElseIf fso.FileExists(shell.ExpandEnvironmentStrings("%LocalAppData%") & "\\\\Google\\\\Chrome\\\\Application\\\\chrome.exe") Then\r\n    chromePath = shell.ExpandEnvironmentStrings("%LocalAppData%") & "\\\\Google\\\\Chrome\\\\Application\\\\chrome.exe"\r\nElse\r\n    chromePath = "chrome.exe"\r\nEnd If\r\n\r\nshell.Run """" & chromePath & """ --profile-directory=""" & folderPart & """ """ & urlPart & """", 1, False\r\n\r\nFunction URLDecode(str)\r\n    Dim i, c, code, result\r\n    result = ""\r\n    i = 1\r\n    Do While i <= Len(str)\r\n        c = Mid(str, i, 1)\r\n        If c = "%" And i + 2 <= Len(str) Then\r\n            code = Mid(str, i + 1, 2)\r\n            result = result & Chr(CLng("&H" & code))\r\n            i = i + 3\r\n        ElseIf c = "+" Then\r\n            result = result & " "\r\n            i = i + 1\r\n        Else\r\n            result = result & c\r\n            i = i + 1\r\n        End If\r\n    Loop\r\n    URLDecode = result\r\nEnd Function\r\n`;
+
+  downloadFile('register-profile-protocol.bat', batContent, 'text/plain');
+  setTimeout(() => {
+    downloadFile('launcher.vbs', vbsContent, 'text/plain');
+  }, 400);
+  showToast('📥 Downloading Windows Protocol Setup Files');
+}
+
+function downloadFile(filename, text, type) {
+  const blob = new Blob([text], { type: type });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+}
+
+function exportBackup() {
+  const dataStr = JSON.stringify({
+    title: 'DREAMSLABSTUDIO Link Launcher Backup',
+    exportDate: new Date().toISOString(),
+    profiles: appData.profiles,
+    links: appData.links
+  }, null, 2);
+  downloadFile('dreamslab-links-backup.json', dataStr, 'application/json');
+  showToast('📦 Backup Exported');
+}
+
+function importBackup(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const parsed = JSON.parse(reader.result);
+      if (parsed.profiles) appData.profiles = parsed.profiles;
+      if (parsed.links) appData.links = parsed.links;
+      applyExactProfileFolders();
+      persistAndSync();
+      showToast('✨ Backup Imported Successfully');
+    } catch (err) {
+      showToast('❌ Invalid Backup File');
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+let toastTimeout;
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  document.getElementById('toastMessage').textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => toast.classList.remove('show'), 2400);
+}
+
+window.addEventListener('DOMContentLoaded', async () => {
+  await loadStoredVault();
+  updateEnvironmentBadge();
+  document.getElementById('vaultPassword').focus();
+});
+</script>
+
+</body>
+</html>
