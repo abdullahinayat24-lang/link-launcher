@@ -1,0 +1,54 @@
+{
+  "name": "dreamslab-cyber-launcher",
+  "productName": "DreamsLab Cyber Launcher",
+  "version": "1.0.3",
+  "description": "Futuristic Glass Chrome Link Launcher by DreamsLabStudio",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "package:win": "electron-packager . \"DreamsLab Cyber Launcher\" --platform=win32 --arch=x64 --out=dist --overwrite"
+  },
+  "keywords": [
+    "launcher",
+    "chrome",
+    "cyber",
+    "glassmorphic"
+  ],
+  "author": "DreamsLabStudio",
+  "license": "MIT",
+  "devDependencies": {
+    "@electron/packager": "^18.4.1",
+    "electron": "^40.8.0",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "com.dreamslabstudio.linklauncher",
+    "productName": "DreamsLab Cyber Launcher",
+    "asar": true,
+    "directories": {
+      "output": "dist_installer"
+    },
+    "files": [
+      "index.html",
+      "main.js",
+      "preload.js",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "zip"
+      ]
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "DreamsLab Cyber Launcher",
+      "runAfterFinish": true,
+      "uninstallDisplayName": "DreamsLab Cyber Launcher"
+    }
+  }
+}
