@@ -990,7 +990,30 @@
       object-fit: cover;
       box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
-  </style>
+  
+    .password-toggle-btn {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-secondary);
+      padding: 4px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      transition: all 0.2s;
+    }
+    .password-toggle-btn:hover {
+      color: var(--text-primary);
+      background: #eaedf5;
+    }
+</style>
 </head>
 <body>
 
@@ -1022,16 +1045,26 @@
         <!-- MASTER PASSWORD INPUT -->
         <div style="position: relative; width: 100%;">
           <input type="password" id="masterPasswordInput" class="form-control" placeholder="Choose Master Password" required style="font-size: 14px; padding: 10px 42px 10px 14px;">
-          <button type="button" id="togglePasswordBtn" onclick="togglePasswordVisibility('masterPasswordInput', this)" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 16px; cursor: pointer; color: var(--text-muted); padding: 4px; border-radius: 50%; display: flex; align-items: center; justify-content: center;" title="View Password">
-            👁️
+          <button type="button" id="togglePasswordBtn" class="password-toggle-btn" onclick="togglePasswordVisibility('masterPasswordInput', this)" title="View Password">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: block; pointer-events: none;">
+            <path d="M 2 12 C 5.5 5 18.5 5 22 12 C 18.5 19 5.5 19 2 12 Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" fill="none"/>
+            <circle cx="12" cy="12" r="5.2" stroke="currentColor" stroke-width="2.2" fill="none"/>
+            <circle cx="12" cy="12" r="3.2" fill="currentColor"/>
+            <circle cx="13.3" cy="10.7" r="0.9" fill="#ffffff"/>
+          </svg>
           </button>
         </div>
 
         <!-- CONFIRM PASSWORD INPUT (Create Mode) -->
         <div id="confirmPasswordGroup" style="position: relative; width: 100%; display: block;">
           <input type="password" id="confirmPasswordInput" class="form-control" placeholder="Confirm Master Password" style="font-size: 14px; padding: 10px 42px 10px 14px;">
-          <button type="button" id="toggleConfirmPasswordBtn" onclick="togglePasswordVisibility('confirmPasswordInput', this)" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 16px; cursor: pointer; color: var(--text-muted); padding: 4px; border-radius: 50%; display: flex; align-items: center; justify-content: center;" title="View Password">
-            👁️
+          <button type="button" id="toggleConfirmPasswordBtn" class="password-toggle-btn" onclick="togglePasswordVisibility('confirmPasswordInput', this)" title="View Password">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: block; pointer-events: none;">
+            <path d="M 2 12 C 5.5 5 18.5 5 22 12 C 18.5 19 5.5 19 2 12 Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" fill="none"/>
+            <circle cx="12" cy="12" r="5.2" stroke="currentColor" stroke-width="2.2" fill="none"/>
+            <circle cx="12" cy="12" r="3.2" fill="currentColor"/>
+            <circle cx="13.3" cy="10.7" r="0.9" fill="#ffffff"/>
+          </svg>
           </button>
         </div>
 
@@ -1440,9 +1473,14 @@
           </div>
           <div style="position: relative; width: 100%;">
             <input type="password" id="cloudTokenInput" class="form-control" placeholder="GitHub Personal Access Token (classic)" style="padding-right: 40px;">
-            <button type="button" onclick="togglePasswordVisibility('cloudTokenInput', this)" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 15px; cursor: pointer; color: var(--text-muted); padding: 4px; display: flex; align-items: center;" title="View Token">
-              👁️
-            </button>
+            <button type="button" id="toggleCloudTokenBtn" class="password-toggle-btn" onclick="togglePasswordVisibility('cloudTokenInput', this)" title="View Token">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: block; pointer-events: none;">
+            <path d="M 2 12 C 5.5 5 18.5 5 22 12 C 18.5 19 5.5 19 2 12 Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" fill="none"/>
+            <circle cx="12" cy="12" r="5.2" stroke="currentColor" stroke-width="2.2" fill="none"/>
+            <circle cx="12" cy="12" r="3.2" fill="currentColor"/>
+            <circle cx="13.3" cy="10.7" r="0.9" fill="#ffffff"/>
+          </svg>
+          </button>
           </div>
         </div>
 
@@ -1587,17 +1625,32 @@
     let isCreatePasswordMode = true;
     let currentUserEmail = '';
 
+    const EYE_OPEN_SVG = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: block; pointer-events: none;">
+            <path d="M 2 12 C 5.5 5 18.5 5 22 12 C 18.5 19 5.5 19 2 12 Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" fill="none"/>
+            <circle cx="12" cy="12" r="5.2" stroke="currentColor" stroke-width="2.2" fill="none"/>
+            <circle cx="12" cy="12" r="3.2" fill="currentColor"/>
+            <circle cx="13.3" cy="10.7" r="0.9" fill="#ffffff"/>
+          </svg>`;
+    const EYE_CLOSED_SVG = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: block; pointer-events: none;">
+            <path d="M 2 12 C 5.5 5 18.5 5 22 12 C 18.5 19 5.5 19 2 12 Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" fill="none"/>
+            <circle cx="12" cy="12" r="5.2" stroke="currentColor" stroke-width="2.2" fill="none"/>
+            <circle cx="12" cy="12" r="3.2" fill="currentColor"/>
+            <circle cx="13.3" cy="10.7" r="0.9" fill="#ffffff"/>
+            <line x1="3" y1="3" x2="21" y2="21" stroke="#ffffff" stroke-width="4.2" stroke-linecap="round"/>
+            <line x1="3" y1="3" x2="21" y2="21" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+          </svg>`;
+
     function togglePasswordVisibility(inputId, btn) {
       const input = document.getElementById(inputId);
       if (!input) return;
       if (input.type === 'password') {
         input.type = 'text';
-        btn.textContent = '🙈';
+        btn.innerHTML = EYE_CLOSED_SVG;
         btn.title = 'Hide Password';
       } else {
         input.type = 'password';
-        btn.textContent = '👁️';
-        btn.title = 'View Password';
+        btn.innerHTML = EYE_OPEN_SVG;
+        btn.title = 'Show Password';
       }
       input.focus();
     }
@@ -1675,8 +1728,12 @@
       const tabSign = document.getElementById('tabSignIn');
 
       if (errorEl) { errorEl.textContent = ''; errorEl.innerHTML = ''; }
-      if (passInput) passInput.value = '';
-      if (confirmInput) confirmInput.value = '';
+      if (passInput) { passInput.value = ''; passInput.type = 'password'; }
+      if (confirmInput) { confirmInput.value = ''; confirmInput.type = 'password'; }
+      const tpBtn = document.getElementById('togglePasswordBtn');
+      const tcBtn = document.getElementById('toggleConfirmPasswordBtn');
+      if (tpBtn) { tpBtn.innerHTML = EYE_OPEN_SVG; tpBtn.title = 'View Password'; }
+      if (tcBtn) { tcBtn.innerHTML = EYE_OPEN_SVG; tcBtn.title = 'View Password'; }
 
       const savedEmail = localStorage.getItem('dreamslab_last_email') || '';
       if (emailInput && !emailInput.value && savedEmail) emailInput.value = savedEmail;
