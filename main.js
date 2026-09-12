@@ -13,15 +13,36 @@ if (!gotTheLock) {
 
 let mainWindow;
 
+function isValidHtmlPackage(content) {
+  if (!content || typeof content !== 'string') return false;
+  if (content.length < 20000) return false;
+  const lower = content.toLowerCase();
+  return lower.includes('<!doctype html') && lower.includes('<html') && lower.includes('</html>') && lower.includes('<script>') && lower.includes('</script>');
+}
+
 function getActiveHtmlPath() {
-  const userHtmlPath = path.join(app.getPath('userData'), 'update', 'index.html');
+  const updateDir = path.join(app.getPath('userData'), 'update');
+  const userHtmlPath = path.join(updateDir, 'index.html');
+  const backupPath = path.join(updateDir, 'index.html.backup');
+
   if (fs.existsSync(userHtmlPath)) {
     try {
-      const stat = fs.statSync(userHtmlPath);
-      if (stat.size > 5000) {
+      const content = fs.readFileSync(userHtmlPath, 'utf8');
+      if (isValidHtmlPackage(content)) {
         return userHtmlPath;
+      } else {
+        console.warn('Cached index.html failed validation. Attempting rollback...');
+        if (fs.existsSync(backupPath)) {
+          const backupContent = fs.readFileSync(backupPath, 'utf8');
+          if (isValidHtmlPackage(backupContent)) {
+            fs.writeFileSync(userHtmlPath, backupContent, 'utf8');
+            return userHtmlPath;
+          }
+        }
       }
-    } catch (e) {}
+    } catch (e) {
+      console.warn('Error verifying cached HTML:', e.message);
+    }
   }
   return path.join(__dirname, 'index.html');
 }
@@ -58,7 +79,17 @@ function createWindow() {
     }
   });
 
-  mainWindow.loadFile(getActiveHtmlPath());
+  const activePath = getActiveHtmlPath();
+  mainWindow.loadFile(activePath);
+
+  // Fallback to bundled HTML if loaded path fails
+  mainWindow.webContents.on('did-fail-load', () => {
+    const bundledPath = path.join(__dirname, 'index.html');
+    if (activePath !== bundledPath && fs.existsSync(bundledPath)) {
+      console.warn('Failed to load cached HTML, rolling back to bundled index.html');
+      mainWindow.loadFile(bundledPath);
+    }
+  });
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     try {
@@ -79,10 +110,15 @@ function checkBackgroundUpdate() {
     res.on('data', chunk => rawData += chunk);
     res.on('end', () => {
       try {
-        if (!rawData || rawData.length < 5000) return;
+        if (!isValidHtmlPackage(rawData)) {
+          console.warn('Background update downloaded invalid payload. Discarding.');
+          return;
+        }
+
         const updateDir = path.join(app.getPath('userData'), 'update');
         if (!fs.existsSync(updateDir)) fs.mkdirSync(updateDir, { recursive: true });
         const userHtmlPath = path.join(updateDir, 'index.html');
+        const backupPath = path.join(updateDir, 'index.html.backup');
 
         let currentContent = '';
         if (fs.existsSync(userHtmlPath)) {
@@ -95,8 +131,12 @@ function checkBackgroundUpdate() {
         }
 
         if (currentContent.trim() !== rawData.trim()) {
+          // Preserve backup before writing new update
+          if (fs.existsSync(userHtmlPath)) {
+            try { fs.copyFileSync(userHtmlPath, backupPath); } catch(e) {}
+          }
           fs.writeFileSync(userHtmlPath, rawData, 'utf8');
-          console.log('Background update saved to user data directory!');
+          console.log('Background update validated and saved to user data directory!');
           if (mainWindow && !mainWindow.isDestroyed()) {
             mainWindow.webContents.send('background-update-ready', { message: 'Latest update downloaded in background!' });
           }
@@ -236,7 +276,7 @@ ipcMain.handle('launch-chrome-profile', async (event, { folder, url, email }) =>
   });
 });
 
-// IPC: Chrome profile detection with structured diagnostics
+// IPC: Chrome profile detection with resilient multi-source extraction & structured diagnostics
 ipcMain.handle('detect-local-chrome-profiles', async () => {
   try {
     const chromeExe = findChromeExecutable();
@@ -251,68 +291,112 @@ ipcMain.handle('detect-local-chrome-profiles', async () => {
       };
     }
 
-    if (!chromeUserData) {
+    if (!chromeUserData || !fs.existsSync(chromeUserData)) {
       return {
         success: false,
-        status: 'NO_PROFILES',
+        status: 'NO_PROFILES_DIR',
         profiles: [],
         error: 'Chrome User Data directory not found.'
       };
     }
 
+    const profileMap = new Map(); // folderName -> profileObj
+
+    // 1. Primary Source: Local State (info_cache)
     const localStatePath = path.join(chromeUserData, 'Local State');
-    if (!fs.existsSync(localStatePath)) {
-      return {
-        success: false,
-        status: 'NO_PROFILES',
-        profiles: [],
-        error: 'Chrome Local State file not found (Chrome has not been initialized on this user profile yet).'
-      };
+    if (fs.existsSync(localStatePath)) {
+      try {
+        const localStateRaw = fs.readFileSync(localStatePath, 'utf8');
+        const localState = JSON.parse(localStateRaw);
+        const profileInfoCache = localState.profile?.info_cache || {};
+        for (const [folderName, info] of Object.entries(profileInfoCache)) {
+          const email = (info.user_name || info.hosted_domain || '').toLowerCase().trim();
+          const name = info.name || folderName;
+          profileMap.set(folderName, {
+            folder: folderName,
+            name: name,
+            email: email,
+            avatarIcon: info.avatar_icon || ''
+          });
+        }
+      } catch (parseErr) {
+        console.warn('Local State parse warning, falling back to direct profile directories:', parseErr.message);
+      }
     }
 
-    let localState;
+    // 2. Secondary Source & Email Enrichment: Inspect individual profile directories
     try {
-      const localStateRaw = fs.readFileSync(localStatePath, 'utf8');
-      localState = JSON.parse(localStateRaw);
-    } catch(parseErr) {
-      return {
-        success: false,
-        status: 'DETECTION_FAILED',
-        profiles: [],
-        error: 'Failed to parse Chrome Local State: ' + parseErr.message
-      };
+      const entries = fs.readdirSync(chromeUserData, { withFileTypes: true });
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue;
+        const folderName = entry.name;
+        if (folderName === 'Default' || folderName.startsWith('Profile ')) {
+          const prefPath = path.join(chromeUserData, folderName, 'Preferences');
+          if (fs.existsSync(prefPath)) {
+            try {
+              const prefRaw = fs.readFileSync(prefPath, 'utf8');
+              const pref = JSON.parse(prefRaw);
+
+              let prefEmail = '';
+              let prefName = '';
+              let avatarPic = '';
+
+              if (Array.isArray(pref.account_info) && pref.account_info.length > 0) {
+                const acc = pref.account_info[0];
+                if (acc.email) prefEmail = acc.email.toLowerCase().trim();
+                if (acc.full_name || acc.given_name) prefName = acc.full_name || acc.given_name;
+                if (acc.picture_url) avatarPic = acc.picture_url;
+              }
+
+              if (!prefEmail && pref.google?.services?.username) {
+                prefEmail = pref.google.services.username.toLowerCase().trim();
+              }
+
+              if (!prefName && pref.profile?.name) {
+                prefName = pref.profile.name;
+              }
+
+              if (profileMap.has(folderName)) {
+                const existing = profileMap.get(folderName);
+                if (!existing.email && prefEmail) existing.email = prefEmail;
+                if (prefName && existing.name === folderName) existing.name = prefName;
+                if (avatarPic && !existing.avatarIcon) existing.avatarIcon = avatarPic;
+              } else {
+                profileMap.set(folderName, {
+                  folder: folderName,
+                  name: prefName || folderName,
+                  email: prefEmail,
+                  avatarIcon: avatarPic
+                });
+              }
+            } catch (prefErr) {
+              console.warn(`Preferences read warning for ${folderName}:`, prefErr.message);
+            }
+          }
+        }
+      }
+    } catch (dirErr) {
+      console.warn('Error reading Chrome User Data directory:', dirErr.message);
     }
 
-    const profileInfoCache = localState.profile?.info_cache || {};
-    const detectedProfiles = [];
-    let hasProfilesWithEmail = false;
+    const allProfiles = Array.from(profileMap.values());
 
-    for (const [folderName, info] of Object.entries(profileInfoCache)) {
-      const email = (info.user_name || info.hosted_domain || '').toLowerCase().trim();
-      const name = info.name || folderName;
-      if (email) hasProfilesWithEmail = true;
-      detectedProfiles.push({
-        folder: folderName,
-        name: name,
-        email: email,
-        avatarIcon: info.avatar_icon || ''
-      });
-    }
-
-    if (detectedProfiles.length === 0) {
+    if (allProfiles.length === 0) {
       return {
         success: true,
         status: 'NO_PROFILES',
         profiles: [],
-        error: 'No Chrome profiles found in Local State.'
+        error: 'No Chrome user profiles found in Chrome User Data.'
       };
     }
+
+    const hasProfilesWithEmail = allProfiles.some(p => p.email && p.email.length > 0);
 
     if (!hasProfilesWithEmail) {
       return {
         success: true,
         status: 'NO_EMAILS',
-        profiles: detectedProfiles,
+        profiles: allProfiles,
         error: 'Chrome profiles were detected, but none are signed into a Google Account.'
       };
     }
@@ -320,7 +404,7 @@ ipcMain.handle('detect-local-chrome-profiles', async () => {
     return {
       success: true,
       status: 'PROFILES_FOUND',
-      profiles: detectedProfiles
+      profiles: allProfiles
     };
   } catch (err) {
     return {
@@ -332,7 +416,7 @@ ipcMain.handle('detect-local-chrome-profiles', async () => {
   }
 });
 
-// IPC: Live Self-Updating from GitHub (Writes to UserData/update for ASAR compatibility)
+// IPC: Live Self-Updating from GitHub (Writes to UserData/update with validation & backup)
 ipcMain.handle('check-and-apply-update', async () => {
   return new Promise((resolve) => {
     const updateUrl = 'https://raw.githubusercontent.com/abdullahinayat24-lang/link-launcher/main/index.html?t=' + Date.now();
@@ -344,12 +428,13 @@ ipcMain.handle('check-and-apply-update', async () => {
       res.on('data', chunk => rawData += chunk);
       res.on('end', () => {
         try {
-          if (!rawData || rawData.length < 5000) {
-            return resolve({ success: false, error: 'Received invalid update package' });
+          if (!isValidHtmlPackage(rawData)) {
+            return resolve({ success: false, error: 'Downloaded update failed integrity checks' });
           }
           const updateDir = path.join(app.getPath('userData'), 'update');
           if (!fs.existsSync(updateDir)) fs.mkdirSync(updateDir, { recursive: true });
           const userHtmlPath = path.join(updateDir, 'index.html');
+          const backupPath = path.join(updateDir, 'index.html.backup');
 
           let currentContent = '';
           if (fs.existsSync(userHtmlPath)) {
@@ -363,6 +448,10 @@ ipcMain.handle('check-and-apply-update', async () => {
 
           if (currentContent.trim() === rawData.trim()) {
             return resolve({ success: true, updated: false, version: 'v1.0.6', message: 'You are already running the latest version (v1.0.6)' });
+          }
+
+          if (fs.existsSync(userHtmlPath)) {
+            try { fs.copyFileSync(userHtmlPath, backupPath); } catch(e) {}
           }
 
           fs.writeFileSync(userHtmlPath, rawData, 'utf8');
