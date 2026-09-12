@@ -1158,23 +1158,10 @@
           </button>
         </div>
 
-        <!-- CLOUD CONNECT GROUP (for new computers / CASE 8) -->
-        <div id="cloudConnectGroup" style="display: none; width: 100%; background: #f0f7ff; border: 1px dashed var(--google-blue); border-radius: var(--radius-md); padding: 10px 12px;">
-          <div style="font-size: 11.5px; font-weight: 600; color: var(--google-blue); margin-bottom: 3px;">☁️ Connect Cloud Account</div>
-          <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 6px; line-height: 1.35;">
-            First time on this computer? Enter your GitHub Gist ID or Token to load your account:
-          </div>
-          <div style="position: relative; width: 100%;">
-            <input type="password" id="cloudConnectInput" class="form-control" placeholder="Gist ID or GitHub Token (classic)" style="font-size: 12.5px; padding: 8px 36px 8px 10px;">
-            <button type="button" id="toggleCloudConnectBtn" class="password-toggle-btn" onclick="togglePasswordVisibility('cloudConnectInput', this)" title="View Token" style="width: 24px; height: 24px;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: block; pointer-events: none;">
-                <path d="M 2 12 C 5.5 5 18.5 5 22 12 C 18.5 19 5.5 19 2 12 Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" fill="none"/>
-                <circle cx="12" cy="12" r="5.2" stroke="currentColor" stroke-width="2.2" fill="none"/>
-                <circle cx="12" cy="12" r="3.2" fill="currentColor"/>
-                <circle cx="13.3" cy="10.7" r="0.9" fill="#ffffff"/>
-              </svg>
-            </button>
-          </div>
+        <!-- CLOUD CONNECT GROUP (Hidden - seamless cloud login) -->
+        <div id="cloudConnectGroup" style="display: none;">
+          <input type="hidden" id="cloudConnectInput" value="">
+          <button type="button" id="toggleCloudConnectBtn" style="display: none;"></button>
         </div>
 
         <button type="submit" id="unlockSubmitBtn" class="btn-primary" style="width: 100%; justify-content: center; height: 42px; font-size: 14px; margin-top: 4px;">
@@ -1186,8 +1173,11 @@
 
       <div id="lockFooterText" style="font-size: 11px; color: var(--text-muted); border-top: 1px solid var(--border-subtle); width: 100%; padding-top: 12px; margin-top: 6px;">
         <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-          <span>Have an account? <a href="#" onclick="setLockMode(false); return false;" style="color: var(--google-blue); text-decoration: underline; cursor: pointer; font-weight: 500;">Sign In</a></span>
+          <span id="lockFooterToggle">Have an account? <a href="#" onclick="setLockMode(false); return false;" style="color: var(--google-blue); text-decoration: underline; cursor: pointer; font-weight: 500;">Sign In</a></span>
           <a href="#" onclick="resetLocalVault(event)" style="color: var(--google-red); text-decoration: underline; cursor: pointer; font-weight: 500;">🧹 Reset this device</a>
+        </div>
+        <div style="margin-top: 8px; text-align: center;">
+          <a href="#" onclick="openServerConfigModal(); return false;" style="color: var(--text-muted); text-decoration: underline; font-size: 11px; cursor: pointer;">⚙️ Cloud Server: <span id="lockServerUrlText">http://localhost:3000</span> [Configure]</a>
         </div>
       </div>
     </div>
@@ -1543,6 +1533,30 @@
   </div>
 
   <!-- CLOUD SYNC MODAL -->
+    <!-- CLOUD SERVER CONFIG MODAL -->
+  <div id="serverConfigModal" class="modal-overlay">
+    <div class="modal-card" style="max-width: 440px;">
+      <div class="modal-header">
+        <div class="modal-title" style="display: flex; align-items: center; gap: 6px;">⚙️ Cloud Server Configuration</div>
+        <button class="modal-close-btn" onclick="closeModal('serverConfigModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 12px; color: var(--text-secondary); line-height: 1.45; margin-bottom: 12px;">
+          Specify your Link Launcher Cloud API URL (default: <code>http://localhost:3000</code> or your deployed Render/Railway/Fly.io server):
+        </p>
+        <div class="form-group">
+          <label class="form-label" style="font-size: 12px;">Cloud Server URL</label>
+          <input type="text" id="configServerUrlInput" class="form-control" placeholder="http://localhost:3000" style="font-size: 13px;">
+        </div>
+        <div id="serverConfigStatus" style="font-size: 12px; text-align: center; min-height: 18px; font-weight: 500;"></div>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button class="btn-secondary" onclick="closeModal('serverConfigModal')">Cancel</button>
+        <button class="btn-primary" onclick="saveServerConfigUrl()">Save & Test Connection</button>
+      </div>
+    </div>
+  </div>
+
   <div id="cloudModal" class="modal-overlay">
     <div class="modal-card" style="max-width: 560px;">
       <div class="modal-header">
@@ -1712,6 +1726,11 @@
     let chromeDetectionStatus = isDesktopApp ? 'INITIALIZING' : 'ONLINE';
     let chromeDetectionError = '';
 
+    // Cloud Backend Configuration
+    let cloudApiUrl = localStorage.getItem('dreamslab_cloud_api_url') || 'http://localhost:3000';
+    let cloudAuthToken = sessionStorage.getItem('dreamslab_auth_token') || null;
+    let syncStatusState = 'synced'; // 'synced', 'syncing', 'offline'
+
     let activeNavView = 'ALL';       // 'ALL', 'STARRED', 'HIGH', 'MEDIUM', 'LOW'
     let activeProfileEmail = null;   // null or 'profile@example.com'
     let activeCategory = 'ALL';      // 'ALL' or specific category
@@ -1813,6 +1832,49 @@
       );
     }
 
+    async function deriveAuthVerifier(email, password) {
+      const enc = new TextEncoder();
+      const normEmail = (email || '').toLowerCase().trim();
+      const salt = enc.encode('dreamslab-auth-salt:' + normEmail);
+      const keyMaterial = await crypto.subtle.importKey(
+        'raw',
+        enc.encode(password),
+        { name: 'PBKDF2' },
+        false,
+        ['deriveBits']
+      );
+      const bits = await crypto.subtle.deriveBits(
+        {
+          name: 'PBKDF2',
+          salt: salt,
+          iterations: 50000,
+          hash: 'SHA-256'
+        },
+        keyMaterial,
+        256
+      );
+      return Array.from(new Uint8Array(bits)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    function updateSyncBadge(status) {
+      syncStatusState = status;
+      const badge = document.getElementById('cloudSyncBadge');
+      if (!badge) return;
+      if (status === 'syncing') {
+        badge.textContent = '🔄 Syncing...';
+        badge.style.color = 'var(--google-blue)';
+        badge.style.background = 'rgba(11,87,208,0.1)';
+      } else if (status === 'synced') {
+        badge.textContent = '☁️ Synced';
+        badge.style.color = '#188038';
+        badge.style.background = 'rgba(24,128,56,0.1)';
+      } else {
+        badge.textContent = '📡 Offline';
+        badge.style.color = 'var(--text-muted)';
+        badge.style.background = 'rgba(114,119,122,0.1)';
+      }
+    }
+
     async function encryptData(data, password) {
       const enc = new TextEncoder();
       const salt = crypto.getRandomValues(new Uint8Array(16));
@@ -1902,13 +1964,38 @@
         if (window.electronAPI && window.electronAPI.saveToDocuments) {
           window.electronAPI.saveToDocuments(JSON.stringify(encrypted));
         }
+
+        // Automatic Cloud Sync
+        if (cloudAuthToken) {
+          updateSyncBadge('syncing');
+          fetch(cloudApiUrl + '/api/vault', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + cloudAuthToken
+            },
+            body: JSON.stringify({
+              encryptedVault: encrypted,
+              updatedAt: new Date().toISOString()
+            })
+          }).then(r => r.json()).then(res => {
+            if (res && res.success) {
+              updateSyncBadge('synced');
+            } else {
+              updateSyncBadge('offline');
+            }
+          }).catch(err => {
+            console.warn('Cloud autosave notice:', err.message);
+            updateSyncBadge('offline');
+          });
+        }
       } catch (err) {
         console.error('Error saving vault:', err);
       }
     }
 
     /* ==========================================================================
-       LOCK SCREEN & AUTHENTICATION FLOW
+       LOCK SCREEN & ZERO-KNOWLEDGE CLOUD AUTHENTICATION FLOW
        ========================================================================== */
     function setLockMode(createMode) {
       isCreatePasswordMode = createMode;
@@ -1921,84 +2008,79 @@
       const tabCreate = document.getElementById('tabCreateAccount');
       const tabSignIn = document.getElementById('tabSignIn');
       const errorEl = document.getElementById('unlockError');
-      const footerText = document.getElementById('lockFooterText');
-      const cloudGroup = document.getElementById('cloudConnectGroup');
+      const footerToggle = document.getElementById('lockFooterToggle');
 
       if (errorEl) errorEl.innerHTML = '';
-      if (cloudGroup) cloudGroup.style.display = 'none';
 
       if (createMode) {
         if (title) title.textContent = 'Create Vault Account';
-        if (subtitle) subtitle.textContent = 'Create a new encrypted multi-profile vault';
+        if (subtitle) subtitle.textContent = 'Register a new zero-knowledge cloud vault';
         if (confirmGroup) confirmGroup.style.display = 'block';
         if (confirmInput) confirmInput.required = true;
         if (submitBtn) submitBtn.textContent = 'Create Account & Open';
         if (passInput) passInput.placeholder = 'Choose Master Password';
         if (tabCreate) { tabCreate.style.background = 'var(--google-blue)'; tabCreate.style.color = '#fff'; }
         if (tabSignIn) { tabSignIn.style.background = 'transparent'; tabSignIn.style.color = 'var(--text-secondary)'; }
-        if (footerText) {
-          footerText.innerHTML = '<div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">' +
-            '<span>Already have an account? <a href="#" onclick="setLockMode(false); return false;" style="color: var(--google-blue); text-decoration: underline; cursor: pointer; font-weight: 500;">Sign In</a></span>' +
-            '<a href="#" onclick="resetLocalVault(event)" style="color: var(--google-red); text-decoration: underline; cursor: pointer; font-weight: 500;">🧹 Reset this device</a>' +
-            '</div>';
+        if (footerToggle) {
+          footerToggle.innerHTML = 'Already have an account? <a href="#" onclick="setLockMode(false); return false;" style="color: var(--google-blue); text-decoration: underline; cursor: pointer; font-weight: 500;">Sign In</a>';
         }
       } else {
         if (title) title.textContent = 'Sign In to Vault';
-        if (subtitle) subtitle.textContent = 'Enter your master password to unlock';
+        if (subtitle) subtitle.textContent = 'Enter your email & master password to sync';
         if (confirmGroup) confirmGroup.style.display = 'none';
         if (confirmInput) confirmInput.required = false;
-        if (submitBtn) submitBtn.textContent = 'Unlock Vault';
+        if (submitBtn) submitBtn.textContent = 'Sign In & Sync';
         if (passInput) passInput.placeholder = 'Master Password';
         if (tabCreate) { tabCreate.style.background = 'transparent'; tabCreate.style.color = 'var(--text-secondary)'; }
         if (tabSignIn) { tabSignIn.style.background = 'var(--google-blue)'; tabSignIn.style.color = '#fff'; }
-        if (footerText) {
-          footerText.innerHTML = '<div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">' +
-            '<span>Don\'t have an account? <a href="#" onclick="setLockMode(true); return false;" style="color: var(--google-blue); text-decoration: underline; cursor: pointer; font-weight: 500;">Create Account</a> · <a href="#" onclick="toggleCloudConnect(); return false;" style="color: var(--google-blue); text-decoration: underline; cursor: pointer; font-weight: 500;">Connect Cloud</a></span>' +
-            '<a href="#" onclick="resetLocalVault(event)" style="color: var(--google-red); text-decoration: underline; cursor: pointer; font-weight: 500;">🧹 Reset this device</a>' +
-            '</div>';
+        if (footerToggle) {
+          footerToggle.innerHTML = 'Need an account? <a href="#" onclick="setLockMode(true); return false;" style="color: var(--google-blue); text-decoration: underline; cursor: pointer; font-weight: 500;">Create Account</a>';
         }
       }
+
+      const serverLabel = document.getElementById('lockServerUrlText');
+      if (serverLabel) serverLabel.textContent = cloudApiUrl;
     }
 
-    async function fetchVaultFromCloud(connectVal) {
-      if (!connectVal) throw new Error('Cloud Gist ID or Token is required');
-      let gistId = connectVal.trim();
-      let token = '';
-
-      if (gistId.includes('gist.github.com/')) {
-        const parts = gistId.split('/').filter(Boolean);
-        gistId = parts[parts.length - 1];
-      }
-
-      if (gistId.startsWith('ghp_') || gistId.startsWith('github_pat_')) {
-        token = gistId;
-        const gistsRes = await fetch('https://api.github.com/gists', {
-          headers: { 'Authorization': 'token ' + token, 'User-Agent': 'DreamsLab' }
-        });
-        if (!gistsRes.ok) throw new Error('GitHub authentication failed (HTTP ' + gistsRes.status + ')');
-        const gists = await gistsRes.json();
-        const vaultGist = gists.find(g => g.files && g.files['dreamslab_vault.json']);
-        if (!vaultGist) throw new Error('No dreamslab_vault.json found in your GitHub Gists');
-        gistId = vaultGist.id;
-      }
-
-      const headers = { 'User-Agent': 'DreamsLab' };
-      if (token) headers['Authorization'] = 'token ' + token;
-      const res = await fetch('https://api.github.com/gists/' + gistId, { headers });
-      if (!res.ok) throw new Error('Gist not found or private (HTTP ' + res.status + ')');
-      const data = await res.json();
-      const file = data.files && (data.files['dreamslab_vault.json'] || Object.values(data.files)[0]);
-      if (!file || !file.content) throw new Error('File dreamslab_vault.json not found in Gist');
-      return JSON.parse(file.content);
+    function openServerConfigModal() {
+      const input = document.getElementById('configServerUrlInput');
+      if (input) input.value = cloudApiUrl;
+      const statusEl = document.getElementById('serverConfigStatus');
+      if (statusEl) statusEl.innerHTML = '';
+      openModal('serverConfigModal');
     }
 
-    function toggleCloudConnect() {
-      const cloudGroup = document.getElementById('cloudConnectGroup');
-      if (!cloudGroup) return;
-      const isHidden = cloudGroup.style.display === 'none' || cloudGroup.style.display === '';
-      cloudGroup.style.display = isHidden ? 'block' : 'none';
-      const input = document.getElementById('cloudConnectInput');
-      if (isHidden && input) input.focus();
+    async function saveServerConfigUrl() {
+      const input = document.getElementById('configServerUrlInput');
+      const statusEl = document.getElementById('serverConfigStatus');
+      if (!input) return;
+      let url = input.value.trim();
+      if (url.endsWith('/')) url = url.slice(0, -1);
+      if (!url) url = 'http://localhost:3000';
+
+      statusEl.innerHTML = '<span style="color: var(--google-blue);">⏳ Testing connection...</span>';
+      try {
+        const res = await fetch(url + '/api/health');
+        if (res.ok) {
+          cloudApiUrl = url;
+          localStorage.setItem('dreamslab_cloud_api_url', url);
+          statusEl.innerHTML = '<span style="color: var(--google-green);">✅ Connected successfully!</span>';
+          const label = document.getElementById('lockServerUrlText');
+          if (label) label.textContent = url;
+          const modalInput = document.getElementById('cloudServerUrlInput');
+          if (modalInput) modalInput.value = url;
+          setTimeout(() => closeModal('serverConfigModal'), 800);
+          showToast('Cloud server updated: ' + url);
+          return;
+        }
+      } catch(e) {}
+
+      cloudApiUrl = url;
+      localStorage.setItem('dreamslab_cloud_api_url', url);
+      statusEl.innerHTML = '<span style="color: var(--google-yellow);">⚠️ URL saved (server is currently offline/unreachable).</span>';
+      const label = document.getElementById('lockServerUrlText');
+      if (label) label.textContent = url;
+      setTimeout(() => closeModal('serverConfigModal'), 1500);
     }
 
     function checkLockScreenState() {
@@ -2012,16 +2094,16 @@
       const hasAccountVault = !!localStorage.getItem(key);
       const hasLegacyVault = !!localStorage.getItem('dreamslab_cyber_vault_v1');
 
-      if (hasAccountVault || hasLegacyVault) {
-        setLockMode(false); // Sign In mode for returning user
+      if (hasAccountVault || hasLegacyVault || lastEmail) {
+        setLockMode(false); // Sign In mode
       } else {
-        setLockMode(true); // First-time Create Account mode
+        setLockMode(true);  // First-time Create Account mode
       }
     }
 
     async function resetLocalVault(e) {
       if (e) e.preventDefault();
-      if (!confirm('⚠️ Are you sure you want to reset this device?\n\nThis will erase the local encrypted vault on this computer. Your cloud vault on GitHub Gist will NOT be affected.\n\nProceed?')) {
+      if (!confirm('⚠️ Are you sure you want to reset this device?\n\nThis will erase the cached encrypted vault on this computer. Your cloud vault on the server will NOT be deleted.\n\nProceed?')) {
         return;
       }
 
@@ -2029,6 +2111,7 @@
       localStorage.removeItem(key);
       localStorage.removeItem('dreamslab_cyber_vault_v1');
       localStorage.removeItem('dreamslab_last_email');
+      sessionStorage.clear();
 
       if (window.electronAPI && window.electronAPI.resetLocalVault) {
         try {
@@ -2037,6 +2120,8 @@
       }
 
       currentPassword = null;
+      currentUserEmail = '';
+      cloudAuthToken = null;
       vaultData = { links: [], profiles: [], categories: [...DEFAULT_CATEGORIES] };
       setLockMode(true);
       const emailInput = document.getElementById('userEmailInput');
@@ -2045,7 +2130,7 @@
       if (emailInput) emailInput.value = '';
       if (passInput) passInput.value = '';
       if (confirmInput) confirmInput.value = '';
-      showToast('Device reset complete. Ready to create or sign in.');
+      showToast('Device cache reset complete. Ready to sign in or create account.');
     }
 
     async function handleUnlock(e) {
@@ -2054,24 +2139,26 @@
       const passInput = document.getElementById('masterPasswordInput');
       const confirmInput = document.getElementById('confirmPasswordInput');
       const errorEl = document.getElementById('unlockError');
-      const email = (emailInput ? emailInput.value : '').trim();
-      const pass = passInput.value.trim();
+      const email = (emailInput ? emailInput.value : '').trim().toLowerCase();
+      const pass = passInput ? passInput.value.trim() : '';
 
-      if (!email) {
-        errorEl.textContent = 'Please enter your email address';
+      if (!email || !email.includes('@')) {
+        errorEl.textContent = 'Please enter a valid email address';
         if (emailInput) emailInput.focus();
         return;
       }
       if (!pass) {
         errorEl.textContent = 'Please enter your master password';
-        passInput.focus();
+        if (passInput) passInput.focus();
         return;
       }
 
-      currentUserEmail = email.toLowerCase();
+      currentUserEmail = email;
       localStorage.setItem('dreamslab_last_email', currentUserEmail);
 
+      // ----------------------------------------------------------------------
       // 1. CREATE ACCOUNT MODE
+      // ----------------------------------------------------------------------
       if (isCreatePasswordMode) {
         const confirmPass = confirmInput ? confirmInput.value.trim() : '';
         if (!confirmPass) {
@@ -2086,119 +2173,151 @@
         }
         if (pass.length < 4) {
           errorEl.textContent = 'Password must be at least 4 characters.';
-          passInput.focus();
+          if (passInput) passInput.focus();
           return;
         }
 
-        currentPassword = pass;
-        vaultData = {
-          links: [],
-          categories: [...DEFAULT_CATEGORIES],
-          profiles: [],
-          cloudConfig: { gistId: '', gistToken: '' },
-          createdAt: new Date().toISOString()
-        };
+        errorEl.innerHTML = '<span style="color: var(--google-blue);">⏳ Creating cloud account...</span>';
 
         try {
-          await saveVault();
+          const authVerifier = await deriveAuthVerifier(email, pass);
+          const initialVault = {
+            links: [],
+            categories: [...DEFAULT_CATEGORIES],
+            profiles: [],
+            cloudConfig: {},
+            createdAt: new Date().toISOString()
+          };
+          const encryptedVault = await encryptData(initialVault, pass);
+
+          // Call Cloud Register API
+          let cloudRegistered = false;
+          try {
+            const regRes = await fetch(cloudApiUrl + '/api/auth/register', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email, authVerifier, encryptedVault })
+            });
+
+            if (regRes.status === 409) {
+              errorEl.innerHTML = 'An account with this email already exists. <a href="#" onclick="setLockMode(false); return false;" style="color: var(--google-blue); font-weight: 600; text-decoration: underline;">Sign In instead</a>.';
+              return;
+            }
+
+            if (regRes.ok) {
+              const regData = await regRes.json();
+              cloudAuthToken = regData.token;
+              sessionStorage.setItem('dreamslab_auth_token', regData.token);
+              cloudRegistered = true;
+            }
+          } catch(netErr) {
+            console.warn('Cloud register network notice:', netErr.message);
+          }
+
+          currentPassword = pass;
+          vaultData = initialVault;
+          const storageKey = getStorageKey(currentUserEmail);
+          localStorage.setItem(storageKey, JSON.stringify(encryptedVault));
+          if (window.electronAPI && window.electronAPI.saveToDocuments) {
+            window.electronAPI.saveToDocuments(JSON.stringify(encryptedVault));
+          }
+
           document.getElementById('lockScreen').style.display = 'none';
           errorEl.textContent = '';
           if (isDesktopApp) {
             await refreshLocalChromeProfiles();
           }
           renderApp();
-          showToast('🎉 Vault created! Welcome to DreamsLab.');
+          showToast(cloudRegistered ? '🎉 Cloud Account created! Welcome to DreamsLab.' : '⚠️ Account created locally (Cloud offline).');
         } catch (err) {
-          errorEl.textContent = 'Failed to create vault: ' + err.message;
+          errorEl.textContent = 'Failed to create account: ' + err.message;
         }
         return;
       }
 
+      // ----------------------------------------------------------------------
       // 2. SIGN IN MODE
-      const storageKey = getStorageKey(currentUserEmail);
-      const storedVaultRaw = localStorage.getItem(storageKey);
-      const legacyVaultRaw = localStorage.getItem('dreamslab_cyber_vault_v1');
-
-      let rawToDecrypt = storedVaultRaw;
-      let isLegacy = false;
-
-      if (!rawToDecrypt && legacyVaultRaw) {
-        rawToDecrypt = legacyVaultRaw;
-        isLegacy = true;
-      }
-
-      if (!rawToDecrypt && window.electronAPI && window.electronAPI.restoreFromDocuments) {
-        try {
-          const res = await window.electronAPI.restoreFromDocuments();
-          if (res && res.success && res.content) {
-            rawToDecrypt = res.content;
-            isLegacy = true;
-          }
-        } catch(e) {}
-      }
-
-      if (!rawToDecrypt) {
-        const cloudGroup = document.getElementById('cloudConnectGroup');
-        const connectInput = document.getElementById('cloudConnectInput');
-        const connectVal = connectInput ? connectInput.value.trim() : '';
-
-        if (!connectVal) {
-          if (cloudGroup) cloudGroup.style.display = 'block';
-          errorEl.innerHTML = '<span style="color: var(--google-blue); font-weight: 600;">☁️ New device detected!</span> Enter your Cloud Sync ID (GitHub Gist ID or Token) above to retrieve your vault, or <a href="#" onclick="setLockMode(true); return false;" style="color: var(--google-blue); font-weight: 600; text-decoration: underline;">Create Account</a>.';
-          if (connectInput) connectInput.focus();
-          return;
-        }
-
-        errorEl.innerHTML = '⏳ Connecting to cloud and retrieving vault...';
-        try {
-          const cloudPayload = await fetchVaultFromCloud(connectVal);
-          if (!cloudPayload) throw new Error('Cloud vault was empty');
-          const decrypted = await decryptData(cloudPayload, pass);
-          if (!decrypted || typeof decrypted !== 'object') {
-            throw new Error('Invalid vault contents');
-          }
-
-          currentPassword = pass;
-          vaultData = decrypted;
-          normalizeVaultLinks();
-          if (!vaultData.cloudConfig) vaultData.cloudConfig = {};
-          if (connectVal.startsWith('ghp_') || connectVal.startsWith('github_pat_')) {
-            vaultData.cloudConfig.gistToken = connectVal;
-          } else {
-            vaultData.cloudConfig.gistId = connectVal;
-          }
-
-          await saveVault(); // Cached locally for future fast logins
-          document.getElementById('lockScreen').style.display = 'none';
-          errorEl.innerHTML = '';
-          if (cloudGroup) cloudGroup.style.display = 'none';
-
-          if (isDesktopApp) {
-            await refreshLocalChromeProfiles();
-          }
-
-          renderApp();
-          showToast('🎉 Cloud account retrieved and unlocked on this device!');
-          return;
-        } catch (cloudErr) {
-          if (cloudErr.message.includes('Incorrect password') || cloudErr.message.includes('operation failed') || cloudErr.message.includes('mac')) {
-            errorEl.innerHTML = '❌ Incorrect master password for this cloud vault.';
-          } else {
-            errorEl.innerHTML = '❌ Could not retrieve cloud vault: ' + cloudErr.message;
-          }
-          return;
-        }
-      }
+      // ----------------------------------------------------------------------
+      errorEl.innerHTML = '<span style="color: var(--google-blue);">⏳ Authenticating Link Launcher account...</span>';
 
       try {
-        let encryptedData;
+        const authVerifier = await deriveAuthVerifier(email, pass);
+        let cloudSuccess = false;
+        let cloudPayload = null;
+
+        // Step 2a: Attempt Cloud Login
         try {
-          encryptedData = typeof rawToDecrypt === 'object' ? rawToDecrypt : JSON.parse(rawToDecrypt);
-        } catch(e) {
-          encryptedData = rawToDecrypt;
+          const loginRes = await fetch(cloudApiUrl + '/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, authVerifier })
+          });
+
+          if (loginRes.status === 401) {
+            errorEl.textContent = '❌ Incorrect master password for this account.';
+            return;
+          }
+
+          if (loginRes.status === 404) {
+            const localCached = localStorage.getItem(getStorageKey(email));
+            if (!localCached) {
+              errorEl.innerHTML = 'Account not found for this email. <a href="#" onclick="setLockMode(true); return false;" style="color: var(--google-blue); font-weight: 600; text-decoration: underline;">Create Account</a> to register.';
+              return;
+            }
+          }
+
+          if (loginRes.ok) {
+            const loginData = await loginRes.json();
+            cloudAuthToken = loginData.token;
+            sessionStorage.setItem('dreamslab_auth_token', loginData.token);
+            cloudPayload = loginData.encryptedVault;
+            cloudSuccess = true;
+          }
+        } catch(netErr) {
+          console.warn('Cloud login network warning, checking offline cache:', netErr.message);
         }
 
-        const decrypted = await decryptData(encryptedData, pass);
+        // Step 2b: Decrypt Vault Payload
+        let rawToDecrypt = cloudPayload;
+        let isOfflineFallback = false;
+
+        if (!rawToDecrypt) {
+          // Check local cached vault
+          const storageKey = getStorageKey(email);
+          rawToDecrypt = localStorage.getItem(storageKey);
+          if (!rawToDecrypt) {
+            rawToDecrypt = localStorage.getItem('dreamslab_cyber_vault_v1');
+          }
+          if (!rawToDecrypt && window.electronAPI && window.electronAPI.restoreFromDocuments) {
+            try {
+              const docRes = await window.electronAPI.restoreFromDocuments();
+              if (docRes && docRes.success && docRes.content) {
+                rawToDecrypt = docRes.content;
+              }
+            } catch(e) {}
+          }
+          if (rawToDecrypt) isOfflineFallback = true;
+        }
+
+        if (!rawToDecrypt) {
+          if (!cloudSuccess) {
+            errorEl.innerHTML = '❌ Cloud server at <code>' + escapeHtml(cloudApiUrl) + '</code> is unreachable and no offline cache exists for this email.<br><a href="#" onclick="openServerConfigModal(); return false;" style="color: var(--google-blue); font-weight: 600; text-decoration: underline;">⚙️ Configure Cloud Server URL</a>';
+          } else {
+            // Account created on cloud but no vault stored yet
+            currentPassword = pass;
+            vaultData = { links: [], categories: [...DEFAULT_CATEGORIES], profiles: [], createdAt: new Date().toISOString() };
+            document.getElementById('lockScreen').style.display = 'none';
+            errorEl.textContent = '';
+            if (isDesktopApp) await refreshLocalChromeProfiles();
+            renderApp();
+            showToast('☁️ Cloud account opened (empty vault).');
+          }
+          return;
+        }
+
+        // Decrypt payload
+        let parsedEncrypted = typeof rawToDecrypt === 'object' ? rawToDecrypt : JSON.parse(rawToDecrypt);
+        const decrypted = await decryptData(parsedEncrypted, pass);
         if (!decrypted || typeof decrypted !== 'object') {
           throw new Error('Invalid vault contents');
         }
@@ -2207,28 +2326,30 @@
         vaultData = decrypted;
         normalizeVaultLinks();
 
-        // Migrate from legacy vault to email-namespaced storage & backup
-        if (isLegacy) {
-          await saveVault();
-          showToast('✅ Existing vault unlocked & linked to your account!');
-        }
+        // Cache payload locally under user email
+        const storageKey = getStorageKey(currentUserEmail);
+        localStorage.setItem(storageKey, typeof rawToDecrypt === 'string' ? rawToDecrypt : JSON.stringify(rawToDecrypt));
 
         document.getElementById('lockScreen').style.display = 'none';
-        errorEl.innerHTML = '';
+        errorEl.textContent = '';
 
         if (isDesktopApp) {
           await refreshLocalChromeProfiles();
         }
 
         renderApp();
-        showToast('🔓 Vault unlocked successfully');
+        showToast(cloudSuccess ? '☁️ Cloud account loaded successfully!' : '📡 Offline Mode: Using local cache.');
 
-        // Auto-pull from Cloud Gist if credentials saved
-        if (vaultData.cloudConfig && vaultData.cloudConfig.gistId && vaultData.cloudConfig.gistToken) {
-          syncPullCloudVault();
+        // If local had unsynced data and cloud was empty, push now
+        if (cloudSuccess && !cloudPayload && vaultData.links && vaultData.links.length > 0) {
+          await saveVault();
         }
-      } catch (err) {
-        errorEl.innerHTML = '❌ Incorrect password for this vault.<br><span style="font-size:11px; color:var(--text-muted);">Want to create a new vault instead? <a href="#" onclick="setLockMode(true); return false;" style="color: var(--google-blue); font-weight: 600; text-decoration: underline;">Create Account</a></span>';
+      } catch (decryptErr) {
+        if (decryptErr.message && (decryptErr.message.includes('operation failed') || decryptErr.message.includes('mac') || decryptErr.message.includes('tag'))) {
+          errorEl.textContent = '❌ Incorrect master password for this account.';
+        } else {
+          errorEl.textContent = '❌ Decryption failed: ' + decryptErr.message;
+        }
       }
     }
 
@@ -2240,20 +2361,29 @@
     }
 
     function handleLogout() {
-      if (confirm('Are you sure you want to log out?\n\nYour local encrypted vault remains safely stored on this computer.')) {
+      if (confirm('Are you sure you want to log out?\n\nYour data remains safely stored in your cloud account.')) {
         currentPassword = null;
         currentUserEmail = '';
+        cloudAuthToken = null;
         vaultData = { links: [], profiles: [], categories: [...DEFAULT_CATEGORIES] };
         activeProfileEmail = null;
         activeCategory = 'ALL';
         sessionStorage.clear();
         setLockMode(false);
+
         const emailInput = document.getElementById('userEmailInput');
         if (emailInput) emailInput.value = '';
         const passInput = document.getElementById('masterPasswordInput');
         if (passInput) passInput.value = '';
-        const cloudConnectInput = document.getElementById('cloudConnectInput');
-        if (cloudConnectInput) cloudConnectInput.value = '';
+        const confirmInput = document.getElementById('confirmPasswordInput');
+        if (confirmInput) confirmInput.value = '';
+
+        // Clear active DOM stream
+        const linksContainer = document.getElementById('linksListContainer');
+        if (linksContainer) linksContainer.innerHTML = '';
+        const profileContainer = document.getElementById('profileNavList');
+        if (profileContainer) profileContainer.innerHTML = '';
+
         document.getElementById('lockScreen').style.display = 'flex';
         checkLockScreenState();
         showToast('🔒 Logged out successfully');
@@ -3391,10 +3521,125 @@
     function openCloudModal() {
       const statusEl = document.getElementById('cloudSyncStatus');
       if (statusEl) statusEl.textContent = '';
+      const emailEl = document.getElementById('cloudAccountEmail');
+      if (emailEl) emailEl.textContent = currentUserEmail || 'Not signed in';
+      const serverInput = document.getElementById('cloudServerUrlInput');
+      if (serverInput) serverInput.value = cloudApiUrl;
+      const modalSync = document.getElementById('cloudModalSyncStatus');
+      if (modalSync) {
+        modalSync.textContent = cloudAuthToken ? '🟢 Auto-Sync Active' : '📡 Offline Mode';
+        modalSync.style.color = cloudAuthToken ? '#188038' : 'var(--text-muted)';
+      }
       const cfg = vaultData.cloudConfig || {};
-      document.getElementById('cloudTokenInput').value = cfg.gistToken || '';
-      document.getElementById('cloudGistIdInput').value = cfg.gistId || '';
+      const tokenInput = document.getElementById('cloudTokenInput');
+      if (tokenInput) tokenInput.value = cfg.gistToken || '';
+      const gistInput = document.getElementById('cloudGistIdInput');
+      if (gistInput) gistInput.value = cfg.gistId || '';
       openModal('cloudModal');
+    }
+
+    function saveCloudServerUrlFromModal() {
+      const input = document.getElementById('cloudServerUrlInput');
+      if (!input) return;
+      let url = input.value.trim();
+      if (url.endsWith('/')) url = url.slice(0, -1);
+      if (!url) url = 'http://localhost:3000';
+      cloudApiUrl = url;
+      localStorage.setItem('dreamslab_cloud_api_url', url);
+      const label = document.getElementById('lockServerUrlText');
+      if (label) label.textContent = url;
+      showToast('Cloud server URL saved: ' + url);
+    }
+
+    async function forceCloudSync() {
+      const statusEl = document.getElementById('cloudSyncStatus');
+      if (statusEl) {
+        statusEl.style.color = 'var(--google-blue)';
+        statusEl.textContent = '⏳ Synchronizing with Cloud Server...';
+      }
+      await saveVault();
+      if (statusEl) {
+        statusEl.style.color = '#188038';
+        statusEl.textContent = '✅ Cloud account fully synchronized!';
+      }
+      showToast('Cloud synchronized');
+    }
+
+    async function migrateFromGist() {
+      const token = (document.getElementById('cloudTokenInput').value || '').trim();
+      const gistId = (document.getElementById('cloudGistIdInput').value || '').trim();
+      const statusEl = document.getElementById('cloudSyncStatus');
+
+      if (!gistId && !token) {
+        if (statusEl) {
+          statusEl.style.color = '#d93025';
+          statusEl.textContent = 'Please enter your legacy Gist ID or Token.';
+        }
+        return;
+      }
+
+      if (statusEl) {
+        statusEl.style.color = 'var(--google-blue)';
+        statusEl.textContent = '⏳ Downloading & migrating links from GitHub Gist...';
+      }
+
+      try {
+        const cloudData = await fetchVaultFromCloud(gistId || token);
+        let decrypted = null;
+        try {
+          decrypted = await decryptData(cloudData, currentPassword);
+        } catch(e) {
+          const pass = prompt('Gist is encrypted with a previous master password.\nEnter password to decrypt and migrate:');
+          if (pass) {
+            decrypted = await decryptData(cloudData, pass.trim());
+          }
+        }
+
+        if (!decrypted || typeof decrypted !== 'object') {
+          throw new Error('Could not decrypt legacy Gist data.');
+        }
+
+        // Merge links
+        let importedLinksCount = 0;
+        const linkMap = new Map();
+        (vaultData.links || []).forEach(l => linkMap.set(l.id, l));
+        (decrypted.links || []).forEach(gl => {
+          if (!linkMap.has(gl.id)) {
+            linkMap.set(gl.id, gl);
+            importedLinksCount++;
+          }
+        });
+        vaultData.links = Array.from(linkMap.values());
+
+        // Merge profiles
+        (decrypted.profiles || []).forEach(gp => {
+          const email = (gp.email || '').toLowerCase().trim();
+          if (email && !(vaultData.profiles || []).some(p => (p.email || '').toLowerCase() === email)) {
+            delete gp.folder;
+            vaultData.profiles.push(gp);
+          }
+        });
+
+        // Merge categories
+        if (Array.isArray(decrypted.categories)) {
+          const set = new Set([...DEFAULT_CATEGORIES, ...(vaultData.categories || []), ...decrypted.categories]);
+          vaultData.categories = Array.from(set);
+        }
+
+        await saveVault();
+        renderApp();
+
+        if (statusEl) {
+          statusEl.style.color = '#188038';
+          statusEl.textContent = '🎉 Successfully migrated ' + importedLinksCount + ' links from Gist into your Cloud Account!';
+        }
+        showToast('Migrated ' + importedLinksCount + ' links from Gist!');
+      } catch(err) {
+        if (statusEl) {
+          statusEl.style.color = '#d93025';
+          statusEl.textContent = 'Migration failed: ' + err.message;
+        }
+      }
     }
 
     async function saveCloudCredentials() {
