@@ -468,7 +468,7 @@
 
     .link-row {
       display: grid;
-      grid-template-columns: 32px 32px 28px 210px minmax(0, 1fr) auto auto;
+      grid-template-columns: 28px 28px 20px 115px minmax(0, 1fr) auto auto;
       align-items: center;
       gap: 8px;
       padding: 8px 16px;
@@ -535,11 +535,7 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      color: #ffffff;
-      font-size: 10.5px;
+      width: 18px; height: 18px; border-radius: 50%; color: #ffffff; font-size: 9.5px;
       font-weight: 700;
       flex-shrink: 0;
     }
@@ -998,49 +994,59 @@
 </head>
 <body>
 
-  <!-- ========================================================================
-       LOCK / MASTER PASS SCREEN
+    <!-- ========================================================================
+       0. ZERO-KNOWLEDGE LOCK SCREEN
        ======================================================================== -->
   <div id="lockScreen">
     <div class="lock-card" style="max-width: 420px; padding: 28px 24px;">
-      <img src="data:image/png;base64,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" class="lock-logo" alt="Logo">
+      <img src="favicon.png" class="lock-logo" alt="Logo" onerror="this.onerror=null; this.src='app_icon.png'">
       <div id="lockTitle" style="font-family: var(--font-google); font-size: 20px; font-weight: 700; color: var(--text-primary);">
-        Sign In / Unlock Vault
+        Create Vault Account
       </div>
       <p id="lockSubtitle" style="font-size: 12px; color: var(--text-muted); margin-top: -4px;">
         AES-256 Multi-Profile Chrome Link Launcher
       </p>
 
-      <form id="unlockForm" onsubmit="handleUnlock(event)" style="width: 100%; display: flex; flex-direction: column; gap: 12px; margin-top: 10px;">
+      <!-- MODE TABS: Create Account / Sign In -->
+      <div style="display: flex; gap: 8px; width: 100%; margin-top: 6px; margin-bottom: 8px; background: #eaedf5; padding: 4px; border-radius: var(--radius-full);">
+        <button type="button" id="tabCreateAccount" onclick="setLockMode(true)" style="flex: 1; padding: 7px 12px; border: none; border-radius: var(--radius-full); font-family: var(--font-google); font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; background: var(--google-blue); color: #fff;">Create Account</button>
+        <button type="button" id="tabSignIn" onclick="setLockMode(false)" style="flex: 1; padding: 7px 12px; border: none; border-radius: var(--radius-full); font-family: var(--font-google); font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; background: transparent; color: var(--text-secondary);">Sign In</button>
+      </div>
+
+      <form id="unlockForm" onsubmit="handleUnlock(event)" style="width: 100%; display: flex; flex-direction: column; gap: 12px; margin-top: 6px;">
         <!-- EMAIL INPUT -->
         <div style="width: 100%;">
-          <input type="email" id="userEmailInput" class="form-control" placeholder="Email Address (e.g. ranakaharian1@gmail.com)" required autofocus style="font-size: 14px; padding: 10px 14px;">
+          <input type="email" id="userEmailInput" class="form-control" placeholder="Email Address (identifies your vault)" required autofocus style="font-size: 14px; padding: 10px 14px;">
         </div>
 
-        <!-- PASSWORD INPUT -->
+        <!-- MASTER PASSWORD INPUT -->
         <div style="position: relative; width: 100%;">
-          <input type="password" id="masterPasswordInput" class="form-control" placeholder="Enter Password" required style="font-size: 14px; padding: 10px 42px 10px 14px;">
+          <input type="password" id="masterPasswordInput" class="form-control" placeholder="Choose Master Password" required style="font-size: 14px; padding: 10px 42px 10px 14px;">
           <button type="button" id="togglePasswordBtn" onclick="togglePasswordVisibility('masterPasswordInput', this)" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 16px; cursor: pointer; color: var(--text-muted); padding: 4px; border-radius: 50%; display: flex; align-items: center; justify-content: center;" title="View Password">
             👁️
           </button>
         </div>
 
         <!-- CONFIRM PASSWORD INPUT (Create Mode) -->
-        <div id="confirmPasswordGroup" style="position: relative; width: 100%; display: none;">
-          <input type="password" id="confirmPasswordInput" class="form-control" placeholder="Confirm Password" style="font-size: 14px; padding: 10px 42px 10px 14px;">
+        <div id="confirmPasswordGroup" style="position: relative; width: 100%; display: block;">
+          <input type="password" id="confirmPasswordInput" class="form-control" placeholder="Confirm Master Password" style="font-size: 14px; padding: 10px 42px 10px 14px;">
           <button type="button" id="toggleConfirmPasswordBtn" onclick="togglePasswordVisibility('confirmPasswordInput', this)" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 16px; cursor: pointer; color: var(--text-muted); padding: 4px; border-radius: 50%; display: flex; align-items: center; justify-content: center;" title="View Password">
             👁️
           </button>
         </div>
 
         <button type="submit" id="unlockSubmitBtn" class="btn-primary" style="width: 100%; justify-content: center; height: 42px; font-size: 14px; margin-top: 4px;">
-          Sign In & Unlock
+          Create Account & Open
         </button>
       </form>
 
-      <div id="unlockError" style="color: var(--google-red); font-size: 12px; font-weight: 500; min-height: 18px; text-align: center;"></div>
+      <div id="unlockError" style="color: var(--google-red); font-size: 12px; font-weight: 500; min-height: 18px; text-align: center; margin-top: 4px;"></div>
 
-      <div id="lockFooterText" style="font-size: 11px; color: var(--text-muted); border-top: 1px solid var(--border-subtle); width: 100%; padding-top: 12px; margin-top: 4px;">
+      <div id="lockFooterText" style="font-size: 11px; color: var(--text-muted); border-top: 1px solid var(--border-subtle); width: 100%; padding-top: 12px; margin-top: 6px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+          <span>Have an existing account? <a href="#" onclick="setLockMode(false); return false;" style="color: var(--google-blue); text-decoration: underline; cursor: pointer; font-weight: 500;">Sign In</a></span>
+          <a href="#" onclick="resetLocalVault(event)" style="color: var(--google-red); text-decoration: underline; cursor: pointer; font-weight: 500;">🧹 Reset this device</a>
+        </div>
       </div>
     </div>
   </div>
@@ -1054,7 +1060,7 @@
       <div class="brand-title-wrap">
         <div class="brand-name">
           DreamsLab
-          <span class="brand-version-badge">v1.0.3</span>
+          <span class="brand-version-badge">v1.0.6</span>
         </div>
       </div>
     </div>
@@ -1414,7 +1420,7 @@
           </div>
           <div id="cloudGuideContent" style="display: flex; flex-direction: column; gap: 8px; font-size: 11.5px; color: var(--text-secondary); line-height: 1.45;">
             <div>
-              <b>1. Get GitHub Token:</b> Click <a href="#" onclick="openExternalDirect('https://github.com/settings/tokens/new?scopes=gist&description=DreamsLab%20Vault%20Sync'); return false;" style="color: var(--google-blue); font-weight: 600; text-decoration: underline;">Get Token (1-Click) ↗</a>, keep <code>gist</code> checked, click <i>Generate token</i> at the bottom, and paste the <code>ghp_...</code> code below.
+              <b>1. Get GitHub Token:</b> Click <a href="#" onclick="openExternalDirect('https://github.com/settings/tokens/new?scopes=gist&description=DreamsLab%20Vault%20Sync'); return false;" style="color: var(--google-blue); font-weight: 600; text-decoration: underline;">Get Token (1-Click) ↗</a>, keep <code>gist</code> checked, click <i>Generate token</i> at the bottom, and paste your GitHub personal access token below.
             </div>
             <div>
               <b>2. Get or Auto-Create Gist:</b> If you don't have a Gist ID, simply click <a href="#" onclick="autoCreatePrivateGist(); return false;" style="color: var(--google-blue); font-weight: 600; text-decoration: underline;">✨ Auto-Create Gist</a> or open <a href="#" onclick="openExternalDirect('https://gist.github.com/'); return false;" style="color: var(--google-blue); text-decoration: underline;">gist.github.com ↗</a> and copy the ID from your URL bar.
@@ -1433,7 +1439,7 @@
             </a>
           </div>
           <div style="position: relative; width: 100%;">
-            <input type="password" id="cloudTokenInput" class="form-control" placeholder="ghp_..." style="padding-right: 40px;">
+            <input type="password" id="cloudTokenInput" class="form-control" placeholder="GitHub Personal Access Token (classic)" style="padding-right: 40px;">
             <button type="button" onclick="togglePasswordVisibility('cloudTokenInput', this)" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 15px; cursor: pointer; color: var(--text-muted); padding: 4px; display: flex; align-items: center;" title="View Token">
               👁️
             </button>
@@ -1452,7 +1458,7 @@
               </a>
             </div>
           </div>
-          <input type="text" id="cloudGistIdInput" class="form-control" placeholder="e.g. 84789e38f03c68d013c338a3664264e5">
+          <input type="text" id="cloudGistIdInput" class="form-control" placeholder="e.g. 7f8a9b0c1d2e3f...">
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 8px;">
@@ -1545,12 +1551,12 @@
     const STORAGE_KEY = 'dreamslab_cyber_vault_v1';
     let currentPassword = null;
     let activeNavView = 'ALL';       // 'ALL', 'STARRED', 'HIGH', 'MEDIUM', 'LOW'
-    let activeProfileEmail = null;   // null or 'entertaindo@gmail.com'
+    let activeProfileEmail = null;   // null or 'profile@example.com'
     let activeCategory = 'ALL';      // 'ALL' or specific category
     let searchQuery = '';
     let selectedLinkIds = new Set();
     let currentDrawerLinkId = null;
-    let filterToLocalOnly = true;    // True: scope to profiles on this PC; False: show all cloud profiles
+    let filterToLocalOnly = false;    // True: scope to profiles on this PC; False: show all cloud profiles
 
     const DEFAULT_CATEGORIES = [
       "Book Publish",
@@ -1565,6 +1571,7 @@
     ];
 
     let vaultData = {
+      userEmail: '',
       profiles: [],
       links: [],
       categories: [...DEFAULT_CATEGORIES],
@@ -1577,8 +1584,8 @@
     // Google Material Colors for Profiles
     const GOOGLE_AVATAR_COLORS = ['#0b57d0', '#d93025', '#188038', '#f29900', '#9334e6', '#007b83', '#c2185b', '#e65100'];
 
-    let isCreatePasswordMode = false;
-    let currentUserEmail = 'ranakaharian1@gmail.com';
+    let isCreatePasswordMode = true;
+    let currentUserEmail = '';
 
     function togglePasswordVisibility(inputId, btn) {
       const input = document.getElementById(inputId);
@@ -1596,7 +1603,7 @@
     }
 
     /* ==========================================================================
-       CRYPTOGRAPHY (AES-256-GCM)
+       CRYPTOGRAPHY (AES-256-GCM + PBKDF2)
        ========================================================================== */
     async function deriveKey(password, salt) {
       const enc = new TextEncoder();
@@ -1651,7 +1658,7 @@
     }
 
     /* ==========================================================================
-       AUTHENTICATION & UNLOCK (EMAIL + PASSWORD)
+       AUTHENTICATION & UNLOCK (EMAIL + MASTER PASSWORD ZERO-KNOWLEDGE ARCHITECTURE)
        ========================================================================== */
     function setLockMode(createMode) {
       isCreatePasswordMode = createMode;
@@ -1664,36 +1671,57 @@
       const confirmGroup = document.getElementById('confirmPasswordGroup');
       const confirmInput = document.getElementById('confirmPasswordInput');
       const errorEl = document.getElementById('unlockError');
+      const tabCreate = document.getElementById('tabCreateAccount');
+      const tabSign = document.getElementById('tabSignIn');
 
-      if (errorEl) errorEl.textContent = '';
+      if (errorEl) { errorEl.textContent = ''; errorEl.innerHTML = ''; }
       if (passInput) passInput.value = '';
       if (confirmInput) confirmInput.value = '';
 
-      const savedEmail = localStorage.getItem('dreamslab_last_email') || 'ranakaharian1@gmail.com';
-      if (emailInput && !emailInput.value) emailInput.value = savedEmail;
+      const savedEmail = localStorage.getItem('dreamslab_last_email') || '';
+      if (emailInput && !emailInput.value && savedEmail) emailInput.value = savedEmail;
+
+      if (tabCreate && tabSign) {
+        if (isCreatePasswordMode) {
+          tabCreate.style.background = 'var(--google-blue)';
+          tabCreate.style.color = '#fff';
+          tabSign.style.background = 'transparent';
+          tabSign.style.color = 'var(--text-secondary)';
+        } else {
+          tabSign.style.background = 'var(--google-blue)';
+          tabSign.style.color = '#fff';
+          tabCreate.style.background = 'transparent';
+          tabCreate.style.color = 'var(--text-secondary)';
+        }
+      }
 
       if (isCreatePasswordMode) {
         if (titleEl) titleEl.textContent = 'Create Vault Account';
-        if (subEl) subEl.textContent = 'Enter your email and password twice to secure your vault.';
-        if (passInput) passInput.placeholder = 'Create Password';
+        if (subEl) subEl.textContent = 'Enter your email and choose a master password.';
+        if (passInput) passInput.placeholder = 'Choose Master Password';
         if (confirmGroup) confirmGroup.style.display = 'block';
         if (confirmInput) confirmInput.required = true;
-        if (btnEl) btnEl.textContent = 'Create & Open Vault';
+        if (btnEl) btnEl.textContent = 'Create Account & Open';
         if (footerEl) {
-          footerEl.innerHTML = 'Already have an account? <a href="#" onclick="setLockMode(false); return false;" style="color: var(--google-blue); text-decoration: underline; cursor: pointer;">Sign In</a>';
+          footerEl.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+              <span>Have an existing account? <a href="#" onclick="setLockMode(false); return false;" style="color: var(--google-blue); text-decoration: underline; cursor: pointer; font-weight: 500;">Sign In</a></span>
+              <a href="#" onclick="resetLocalVault(event)" style="color: var(--google-red); text-decoration: underline; cursor: pointer; font-weight: 500;">🧹 Reset this device</a>
+            </div>
+          `;
         }
       } else {
         if (titleEl) titleEl.textContent = 'Sign In / Unlock Vault';
-        if (subEl) subEl.textContent = 'Enter your email and password to decrypt your vault.';
-        if (passInput) passInput.placeholder = 'Enter Password';
+        if (subEl) subEl.textContent = 'Enter your email and master password to decrypt.';
+        if (passInput) passInput.placeholder = 'Enter Master Password';
         if (confirmGroup) confirmGroup.style.display = 'none';
         if (confirmInput) confirmInput.required = false;
         if (btnEl) btnEl.textContent = 'Sign In & Unlock';
         if (footerEl) {
           footerEl.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <a href="#" onclick="setLockMode(true); return false;" style="color: var(--google-blue); text-decoration: underline; cursor: pointer;">Create Account</a>
-              <a href="#" onclick="resetLocalVault(event)" style="color: var(--text-muted); text-decoration: underline; cursor: pointer;">Reset Device</a>
+            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+              <span>New device or user? <a href="#" onclick="setLockMode(true); return false;" style="color: var(--google-blue); text-decoration: underline; cursor: pointer; font-weight: 500;">Create Account</a></span>
+              <a href="#" onclick="resetLocalVault(event)" style="color: var(--google-red); text-decoration: underline; cursor: pointer; font-weight: 500;">🧹 Reset this device</a>
             </div>
           `;
         }
@@ -1701,12 +1729,14 @@
     }
 
     function checkLockScreenState() {
-      setLockMode(false);
+      // If no local vault exists yet on this PC, show Create Account at the start!
+      const hasLocalVault = !!localStorage.getItem(STORAGE_KEY);
+      setLockMode(!hasLocalVault);
     }
 
     async function resetLocalVault(e) {
       if (e) e.preventDefault();
-      if (confirm('Are you sure you want to completely reset this PC\'s local vault?\n\nThis will remove all local cached profiles & links from this computer.\n(Your cloud backup on GitHub Gist will remain safe).')) {
+      if (confirm("Are you sure you want to completely reset this PC's local vault?\n\nThis will remove all locally cached profiles & links from this computer.\n(Your cloud backup on GitHub Gist will remain untouched).\n\nYou can create a new account or sign in afresh.")) {
         localStorage.removeItem(STORAGE_KEY);
         localStorage.removeItem('dreamslab_last_email');
         if (window.electronAPI && window.electronAPI.resetLocalVault) {
@@ -1739,11 +1769,11 @@
 
       if (!email) {
         errorEl.textContent = 'Please enter your email address';
-        emailInput.focus();
+        if (emailInput) emailInput.focus();
         return;
       }
       if (!pass) {
-        errorEl.textContent = 'Please enter your password';
+        errorEl.textContent = 'Please enter your master password';
         passInput.focus();
         return;
       }
@@ -1751,12 +1781,14 @@
       currentUserEmail = email.toLowerCase();
       localStorage.setItem('dreamslab_last_email', currentUserEmail);
 
-      // Sign Up / Create Account Mode:
+      // ----------------------------------------------------
+      // 1. CREATE ACCOUNT MODE
+      // ----------------------------------------------------
       if (isCreatePasswordMode) {
         const confirmPass = confirmInput ? confirmInput.value.trim() : '';
         if (!confirmPass) {
-          errorEl.textContent = 'Please confirm your password';
-          confirmInput.focus();
+          errorEl.textContent = 'Please confirm your master password';
+          if (confirmInput) confirmInput.focus();
           return;
         }
         if (pass !== confirmPass) {
@@ -1770,10 +1802,7 @@
           profiles: [],
           links: [],
           categories: [...DEFAULT_CATEGORIES],
-          cloudConfig: {
-            gistId: (currentUserEmail === 'ranakaharian1@gmail.com') ? '84789e38f03c68d013c338a3664264e5' : '',
-            gistToken: ''
-          }
+          cloudConfig: { gistId: '', gistToken: '' }
         };
         normalizeVaultLinks();
         if (window.electronAPI && window.electronAPI.detectLocalChromeProfiles) {
@@ -1782,12 +1811,15 @@
         await saveVault();
         document.getElementById('lockScreen').style.display = 'none';
         renderApp();
-        showToast(`✅ Account ${currentUserEmail} created!`);
+        showToast(`✅ Vault account created for ${currentUserEmail}`);
         return;
       }
 
-      // Normal Sign In / Unlock Mode:
+      // ----------------------------------------------------
+      // 2. SIGN IN / UNLOCK MODE
+      // ----------------------------------------------------
       errorEl.textContent = '';
+      errorEl.innerHTML = '';
       let rawStored = localStorage.getItem(STORAGE_KEY);
       if (!rawStored && window.electronAPI && window.electronAPI.restoreFromDocuments) {
         try {
@@ -1796,92 +1828,49 @@
         } catch(e) {}
       }
 
-      let loadedVault = null;
-      let needsReEncrypt = false;
-
-      if (rawStored) {
-        try {
-          const encrypted = JSON.parse(rawStored);
-          try {
-            loadedVault = await decryptData(encrypted, pass);
-          } catch(err1) {
-            const candidatePasswords = ['5746', '8105746', 'Lhana!472580'];
-            for (const cand of candidatePasswords) {
-              if (cand === pass) continue;
-              try {
-                loadedVault = await decryptData(encrypted, cand);
-                if (loadedVault) {
-                  needsReEncrypt = true;
-                  break;
-                }
-              } catch(err2) {}
-            }
-          }
-        } catch(parseErr) {
-          console.warn('Raw stored parse error:', parseErr);
-        }
+      if (!rawStored) {
+        errorEl.innerHTML = 'No local vault found on this device.<br>Please <a href="#" onclick="setLockMode(true); return false;" style="color: var(--google-blue); text-decoration: underline; cursor: pointer; font-weight: 500;">Create an Account</a> or <a href="#" onclick="resetLocalVault(event)" style="color: var(--google-red); text-decoration: underline; cursor: pointer;">Reset Device</a>.';
+        return;
       }
 
-      if (loadedVault && Array.isArray(loadedVault.links)) {
+      let loadedVault = null;
+      try {
+        const encrypted = JSON.parse(rawStored);
+        loadedVault = await decryptData(encrypted, pass);
+      } catch (decryptErr) {
+        // Decryption failed with entered password - strict zero-knowledge security
+        errorEl.innerHTML = '❌ Incorrect password for this vault. Please re-enter, or <a href="#" onclick="resetLocalVault(event)" style="color: var(--google-blue); text-decoration: underline; cursor: pointer; font-weight: 500;">Reset this device</a> if you wish to start fresh.';
+        return;
+      }
+
+      if (loadedVault && (Array.isArray(loadedVault.links) || Array.isArray(loadedVault.profiles))) {
         currentPassword = pass;
         vaultData = loadedVault;
-        vaultData.userEmail = currentUserEmail;
-        if (currentUserEmail === 'ranakaharian1@gmail.com' && (!vaultData.cloudConfig || !vaultData.cloudConfig.gistId)) {
-          vaultData.cloudConfig = {
-            gistId: '84789e38f03c68d013c338a3664264e5',
-            gistToken: ''
-          };
+        if (!vaultData.userEmail) {
+          vaultData.userEmail = currentUserEmail;
         }
         normalizeVaultLinks();
-        if (needsReEncrypt) {
-          await saveVault();
-        }
         document.getElementById('lockScreen').style.display = 'none';
         if (window.electronAPI && window.electronAPI.detectLocalChromeProfiles) {
           await syncLocalChromeProfiles();
         } else {
           renderApp();
         }
-        showToast(`✅ Welcome, ${currentUserEmail}`);
+        showToast(`✅ Welcome, ${vaultData.userEmail || currentUserEmail}`);
         return;
       }
 
-      // If local decryption failed, check if user is ranakaharian1 with Lhana!472580 to auto-pull
-      if (currentUserEmail === 'ranakaharian1@gmail.com' && (pass === 'Lhana!472580' || pass === '5746')) {
-        currentPassword = pass;
-        vaultData = {
-          userEmail: currentUserEmail,
-          profiles: [],
-          links: [],
-          categories: [...DEFAULT_CATEGORIES],
-          cloudConfig: {
-            gistId: '84789e38f03c68d013c338a3664264e5',
-            gistToken: ''
-          }
-        };
-        normalizeVaultLinks();
-        if (window.electronAPI && window.electronAPI.detectLocalChromeProfiles) {
-          await syncLocalChromeProfiles();
-        }
-        await saveVault();
-        document.getElementById('lockScreen').style.display = 'none';
-        renderApp();
-        showToast(`✅ Welcome, ${currentUserEmail}! Pulling cloud links...`);
-        return;
-      }
-
-      errorEl.textContent = '❌ Incorrect email or password. Decryption failed.';
+      errorEl.innerHTML = '❌ Incompatible vault data. <a href="#" onclick="resetLocalVault(event)" style="color: var(--google-blue); text-decoration: underline; cursor: pointer; font-weight: 500;">Reset this device</a> to start fresh.';
     }
 
     function lockVault() {
       currentPassword = null;
-      checkLockScreenState();
       document.getElementById('lockScreen').style.display = 'flex';
-      closeDetailDrawer();
+      checkLockScreenState();
       showToast('🔒 Vault locked');
     }
 
-    /* ==========================================================================
+/* ==========================================================================
        DATA NORMALIZATION & PROFILE SYNC
        ========================================================================== */
     function normalizeVaultLinks() {
@@ -2040,7 +2029,9 @@
       }
     }
 
-    /* ==========================================================================
+    
+
+/* ==========================================================================
        MAIN RENDER ENGINE
        ========================================================================== */
     function renderApp() {
@@ -2315,7 +2306,7 @@
 
             <!-- TITLE & SNIPPET -->
             <div class="link-content-col">
-              <img src="${faviconUrl}" class="link-favicon-mini" onerror="this.src='favicon.png'">
+              <img src="${faviconUrl}" class="link-favicon-mini" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2372777a\' stroke-width=\'2\'><circle cx=\'12\' cy=\'12\' r=\'10\'/><line x1=\'2\' y1=\'12\' x2=\'22\' y2=\'12\'/><path d=\'M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z\'/></svg>';">
               <span class="link-title-text">${escapeHtml(l.title)}</span>
               <span class="link-snippet-text">— ${escapeHtml(l.notes || l.url)}</span>
             </div>
@@ -2808,21 +2799,12 @@
     }
 
     /* CLOUD SYNC & TUTORIAL */
-    function saveCloudCredentials() {
-      const token = document.getElementById('cloudTokenInput').value.trim();
-      const gistId = document.getElementById('cloudGistIdInput').value.trim();
-      const statusEl = document.getElementById('cloudSyncStatus');
-
-      vaultData.cloudConfig = { gistToken: token, gistId: gistId };
-      saveVault();
-      statusEl.style.color = '#188038';
-      statusEl.textContent = '💾 Cloud credentials saved securely to your account!';
-      showToast('💾 Cloud credentials saved');
-    }
-
     
+
+    /* ==========================================================================
+       CLOUD SYNC ENGINE (POST-LOGIN GITHUB GIST)
+       ========================================================================== */
     function openExternalDirect(url) {
-      if (!url) return;
       if (window.electronAPI && window.electronAPI.openExternal) {
         window.electronAPI.openExternal(url);
       } else {
@@ -2831,71 +2813,83 @@
     }
 
     function toggleCloudGuide() {
-      const content = document.getElementById('cloudGuideContent');
+      const guide = document.getElementById('cloudGuideContent');
       const btn = document.getElementById('btnToggleCloudGuide');
-      if (!content) return;
-      if (content.style.display === 'none') {
-        content.style.display = 'flex';
-        btn.textContent = 'Hide Guide';
+      if (!guide) return;
+      if (guide.style.display === 'none') {
+        guide.style.display = 'flex';
+        if (btn) btn.textContent = 'Hide Guide';
       } else {
-        content.style.display = 'none';
-        btn.textContent = 'Show Guide';
+        guide.style.display = 'none';
+        if (btn) btn.textContent = 'Show Guide';
       }
     }
 
     function openCloudModal() {
-      document.getElementById('cloudTokenInput').value = vaultData.cloudConfig?.gistToken || '';
-      document.getElementById('cloudGistIdInput').value = vaultData.cloudConfig?.gistId || '';
       document.getElementById('cloudSyncStatus').textContent = '';
+      if (vaultData.cloudConfig) {
+        document.getElementById('cloudTokenInput').value = vaultData.cloudConfig.gistToken || '';
+        document.getElementById('cloudGistIdInput').value = vaultData.cloudConfig.gistId || '';
+      }
       openModal('cloudModal');
     }
 
-    async function autoCreatePrivateGist() {
-      const tokenInput = document.getElementById('cloudTokenInput');
-      const token = (tokenInput.value || '').trim();
+    async function saveCloudCredentials() {
+      const token = document.getElementById('cloudTokenInput').value.trim();
+      const gistId = document.getElementById('cloudGistIdInput').value.trim();
       const statusEl = document.getElementById('cloudSyncStatus');
 
+      if (!vaultData.cloudConfig) vaultData.cloudConfig = {};
+      vaultData.cloudConfig.gistToken = token;
+      vaultData.cloudConfig.gistId = gistId;
+      await saveVault();
+
+      statusEl.style.color = '#188038';
+      statusEl.textContent = '✅ Cloud credentials saved encrypted inside your vault!';
+      showToast('Cloud credentials saved securely');
+    }
+
+    async function autoCreatePrivateGist() {
+      const token = document.getElementById('cloudTokenInput').value.trim();
+      const statusEl = document.getElementById('cloudSyncStatus');
       if (!token) {
         statusEl.style.color = '#d93025';
-        statusEl.textContent = 'Please paste your GitHub Token first, then click Auto-Create Gist.';
-        tokenInput.focus();
+        statusEl.textContent = 'Please enter your GitHub Token first';
         return;
       }
+      statusEl.style.color = '#0b57d0';
+      statusEl.textContent = 'Creating private GitHub Gist...';
 
       try {
-        statusEl.style.color = '#0b57d0';
-        statusEl.textContent = 'Creating private Gist on your GitHub account...';
-
         const encrypted = await encryptData(vaultData, currentPassword);
-        const payload = {
-          description: 'DreamsLab Link Launcher Encrypted Vault',
-          public: false,
-          files: {
-            'dreamslab_vault.json': {
-              content: JSON.stringify(encrypted)
-            }
-          }
-        };
-
         const res = await fetch('https://api.github.com/gists', {
           method: 'POST',
           headers: {
-            'Authorization': `token ${token}`,
+            Authorization: 'token ' + token,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify(payload)
+          body: JSON.stringify({
+            description: 'DreamsLab Multi-Profile Vault (AES-256 Encrypted)',
+            public: false,
+            files: {
+              'dreamslab_vault.json': {
+                content: JSON.stringify(encrypted)
+              }
+            }
+          })
         });
 
         if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.message || 'GitHub API error (HTTP ' + res.status + ')');
+          throw new Error('GitHub returned status ' + res.status);
         }
 
         const data = await res.json();
         const newGistId = data.id;
 
         document.getElementById('cloudGistIdInput').value = newGistId;
-        vaultData.cloudConfig = { gistToken: token, gistId: newGistId };
+        if (!vaultData.cloudConfig) vaultData.cloudConfig = {};
+        vaultData.cloudConfig.gistToken = token;
+        vaultData.cloudConfig.gistId = newGistId;
         await saveVault();
 
         statusEl.style.color = '#188038';
@@ -2908,8 +2902,8 @@
     }
 
     async function syncPushCloudVault() {
-      const token = document.getElementById('cloudTokenInput').value.trim();
-      const gistId = document.getElementById('cloudGistIdInput').value.trim();
+      const token = document.getElementById('cloudTokenInput').value.trim() || (vaultData.cloudConfig && vaultData.cloudConfig.gistToken) || '';
+      const gistId = document.getElementById('cloudGistIdInput').value.trim() || (vaultData.cloudConfig && vaultData.cloudConfig.gistId) || '';
       const statusEl = document.getElementById('cloudSyncStatus');
       if (!token || !gistId) { 
         statusEl.style.color = '#d93025'; 
@@ -2918,35 +2912,102 @@
       }
 
       if (!vaultData.links || vaultData.links.length === 0) {
-        if (!confirm('⚠️ Warning: Your vault currently has 0 links. Pushing now will overwrite your cloud backup with an empty vault.\n\nDid you mean to click "Pull from Cloud" instead?\n\nClick Cancel to abort or OK to overwrite.')) {
+        if (!confirm('Warning: Your vault has 0 links. Push will overwrite cloud with empty vault.\n\nClick Cancel to abort.')) {
           statusEl.style.color = '#e37400';
-          statusEl.textContent = 'Push cancelled. Click "Pull from Cloud" to download your saved links.';
+          statusEl.textContent = 'Push cancelled.';
           return;
         }
       }
 
       try {
         statusEl.style.color = '#0b57d0';
-        statusEl.textContent = 'Encrypting & uploading to Gist...';
+        statusEl.textContent = 'Fetching cloud vault to merge...';
+        if (!vaultData.cloudConfig) vaultData.cloudConfig = {};
         vaultData.cloudConfig.gistToken = token;
         vaultData.cloudConfig.gistId = gistId;
 
-        const encrypted = await encryptData(vaultData, currentPassword);
+        // Step 1: fetch & decrypt current cloud vault so other PCs' profiles/links are NEVER lost
+        let cloudLinks = [], cloudCategories = [], cloudProfiles = [];
+        try {
+          const cloudRes = await fetch('https://api.github.com/gists/' + gistId, {
+            headers: { Authorization: 'token ' + token }
+          });
+          if (cloudRes.ok) {
+            const cloudJson = await cloudRes.json();
+            const cloudFile = cloudJson.files && (cloudJson.files['dreamslab_vault.json'] || Object.values(cloudJson.files)[0]);
+            if (cloudFile && cloudFile.content) {
+              const cloudEncrypted = JSON.parse(cloudFile.content);
+              let cloudDecrypted = null;
+              try { 
+                cloudDecrypted = await decryptData(cloudEncrypted, currentPassword); 
+              } catch(e) {
+                const cloudPass = prompt('Cloud Vault was encrypted with a different password.\nEnter password to merge cloud data:');
+                if (cloudPass) {
+                  cloudDecrypted = await decryptData(cloudEncrypted, cloudPass.trim());
+                }
+              }
+              if (cloudDecrypted && Array.isArray(cloudDecrypted.links)) {
+                cloudLinks = cloudDecrypted.links;
+                cloudCategories = cloudDecrypted.categories || [];
+                cloudProfiles = cloudDecrypted.profiles || [];
+              }
+            }
+          }
+        } catch(e) { /* cloud fetch failed, push local only */ }
+
+        const isDesktop = !!(window.electronAPI && window.electronAPI.detectLocalChromeProfiles);
+        const localEmails = getLocalEmailsSet();
+
+        // Step 2: Smart Email Scoped Merge
+        let mergedLinks = [];
+        if (isDesktop && localEmails.size > 0) {
+          // Links in cloud belonging to OTHER emails (other computers) are 100% PRESERVED
+          const otherPcLinks = cloudLinks.filter(l => {
+            const lEmail = (l.profileEmail || '').toLowerCase().trim();
+            return lEmail && !localEmails.has(lEmail);
+          });
+          // Current PC's links for its local emails (includes any added, edited, or removed links)
+          const thisPcLinks = vaultData.links || [];
+          mergedLinks = [...otherPcLinks, ...thisPcLinks];
+        } else {
+          // Full merge by ID
+          const mergedMap = new Map();
+          cloudLinks.forEach(function(l) { mergedMap.set(l.id, l); });
+          (vaultData.links || []).forEach(function(l) { mergedMap.set(l.id, l); });
+          mergedLinks = Array.from(mergedMap.values());
+        }
+
+        const catSet = new Set([...DEFAULT_CATEGORIES, ...cloudCategories, ...(vaultData.categories || [])]);
+
+        const profileMap = new Map();
+        cloudProfiles.forEach(function(p) { profileMap.set(p.email, p); });
+        (vaultData.profiles || []).forEach(function(p) { profileMap.set(p.email, p); });
+        const mergedProfiles = Array.from(profileMap.values());
+
+        statusEl.textContent = 'Encrypting ' + mergedLinks.length + ' links & uploading...';
+
+        const mergedVault = { links: mergedLinks, categories: Array.from(catSet), profiles: mergedProfiles, cloudConfig: { gistId: gistId } };
+        // IMPORTANT: do not put token inside the cloud backup itself!
+        const encrypted = await encryptData(mergedVault, currentPassword);
         const payload = { files: { 'dreamslab_vault.json': { content: JSON.stringify(encrypted) } } };
 
-        const res = await fetch(`https://api.github.com/gists/${gistId}`, {
+        const pushRes = await fetch('https://api.github.com/gists/' + gistId, {
           method: 'PATCH',
-          headers: { Authorization: `token ${token}`, 'Content-Type': 'application/json' },
+          headers: { Authorization: 'token ' + token, 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
 
-        if (res.ok) {
+        if (pushRes.ok) {
+          vaultData.links = (isDesktop && localEmails.size > 0) ? (vaultData.links || []) : mergedLinks;
+          vaultData.categories = Array.from(catSet);
+          vaultData.profiles = mergedProfiles;
           await saveVault();
+          renderApp();
           statusEl.style.color = '#188038';
-          statusEl.textContent = `✅ Synced ${vaultData.links.length} links to Cloud Gist!`;
-          showToast('☁️ Cloud Vault updated!');
+          statusEl.textContent = '✅ Synced ' + mergedLinks.length + ' links to Cloud!';
+          showToast('Cloud Vault updated! (' + mergedLinks.length + ' total links)');
         } else {
-          throw new Error('Gist update failed (HTTP ' + res.status + ')');
+          throw new Error('Gist update failed (HTTP ' + pushRes.status + ')');
         }
       } catch (err) {
         statusEl.style.color = '#d93025';
@@ -2955,8 +3016,8 @@
     }
 
     async function syncPullCloudVault() {
-      const token = document.getElementById('cloudTokenInput').value.trim();
-      const gistId = document.getElementById('cloudGistIdInput').value.trim();
+      const token = document.getElementById('cloudTokenInput').value.trim() || (vaultData.cloudConfig && vaultData.cloudConfig.gistToken) || '';
+      const gistId = document.getElementById('cloudGistIdInput').value.trim() || (vaultData.cloudConfig && vaultData.cloudConfig.gistId) || '';
       const statusEl = document.getElementById('cloudSyncStatus');
       if (!token || !gistId) { 
         statusEl.style.color = '#d93025'; 
@@ -2967,8 +3028,8 @@
       try {
         statusEl.style.color = '#0b57d0';
         statusEl.textContent = 'Downloading encrypted vault from Gist...';
-        const res = await fetch(`https://api.github.com/gists/${gistId}`, {
-          headers: { Authorization: `token ${token}` }
+        const res = await fetch('https://api.github.com/gists/' + gistId, {
+          headers: { Authorization: 'token ' + token }
         });
         if (!res.ok) throw new Error('Failed to fetch Gist (HTTP ' + res.status + ')');
 
@@ -2981,10 +3042,9 @@
         try {
           decrypted = await decryptData(cloudEncrypted, currentPassword);
         } catch (decErr) {
-          const cloudPass = prompt('Cloud Vault was encrypted with a different password. Please enter the master password for this cloud backup:');
+          const cloudPass = prompt('Cloud Vault was encrypted with a different password.\nEnter the master password for this cloud backup:');
           if (cloudPass) {
             decrypted = await decryptData(cloudEncrypted, cloudPass.trim());
-            currentPassword = cloudPass.trim();
           } else {
             throw new Error('Decryption cancelled or password incorrect');
           }
@@ -2994,33 +3054,59 @@
           throw new Error('Invalid cloud vault content');
         }
 
-        vaultData.links = decrypted.links || [];
+        const isDesktop = !!(window.electronAPI && window.electronAPI.detectLocalChromeProfiles);
+        const localEmails = getLocalEmailsSet();
+
+        let incomingLinks = decrypted.links;
+        // When pull, check which IDs we have locally and pull only for those emails
+        // But online when it can't detect any IDs, pull all!
+        if (isDesktop && localEmails.size > 0) {
+          incomingLinks = decrypted.links.filter(l => {
+            const lEmail = (l.profileEmail || '').toLowerCase().trim();
+            return localEmails.has(lEmail);
+          });
+        }
+
+        // MERGE — keep local-only links, incoming cloud links overwrite or add by link id
+        const mergedMap = new Map();
+        (vaultData.links || []).forEach(function(l) { mergedMap.set(l.id, l); });
+        incomingLinks.forEach(function(l) { mergedMap.set(l.id, l); });
+        vaultData.links = Array.from(mergedMap.values());
+
         if (Array.isArray(decrypted.categories)) {
-          const catSet = new Set([...DEFAULT_CATEGORIES, ...decrypted.categories]);
+          const catSet = new Set([...DEFAULT_CATEGORIES, ...(vaultData.categories || []), ...decrypted.categories]);
           vaultData.categories = Array.from(catSet);
         }
 
-        vaultData.cloudConfig = { gistToken: token, gistId: gistId };
+        if (!vaultData.cloudConfig) vaultData.cloudConfig = {};
+        vaultData.cloudConfig.gistToken = token;
+        vaultData.cloudConfig.gistId = gistId;
+
+        // Merge profiles
+        if (Array.isArray(decrypted.profiles)) {
+          const profileMap = new Map();
+          (vaultData.profiles || []).forEach(function(p) { profileMap.set(p.email, p); });
+          decrypted.profiles.forEach(function(p) { profileMap.set(p.email, p); });
+          vaultData.profiles = Array.from(profileMap.values());
+        }
 
         if (window.electronAPI && window.electronAPI.detectLocalChromeProfiles) {
           await syncLocalChromeProfiles();
-        } else if (Array.isArray(decrypted.profiles) && vaultData.profiles.length === 0) {
-          vaultData.profiles = decrypted.profiles;
         }
 
         normalizeVaultLinks();
         await saveVault();
         renderApp();
         statusEl.style.color = '#188038';
-        statusEl.textContent = `✅ Restored ${vaultData.links.length} links from Cloud!`;
-        showToast(`☁️ Pulled ${vaultData.links.length} links from cloud!`);
+        statusEl.textContent = '✅ Restored ' + vaultData.links.length + ' links from Cloud!';
+        showToast('Pulled ' + incomingLinks.length + ' links from cloud!');
       } catch (err) {
         statusEl.style.color = '#d93025';
         statusEl.textContent = 'Pull failed: ' + err.message;
       }
     }
 
-    /* BACKUP EXPORT / IMPORT */
+/* BACKUP EXPORT / IMPORT */
     function openLocalSaveModal() {
       document.getElementById('localSaveStatus').textContent = '';
       openModal('localSaveModal');
@@ -3108,6 +3194,7 @@
       window.addEventListener('DOMContentLoaded', () => {
       checkLockScreenState();
     });
-  </script>
+  
+</script>
 </body>
 </html>
