@@ -278,12 +278,17 @@ app.post('/api/vault', requireAuth, (req, res) => {
   }
 });
 
-// Start Server if executed directly
-if (require.main === module) {
-  app.listen(PORT, () => {
-    console.log(`DreamsLab Cloud Vault API running on http://localhost:${PORT}`);
+function startServer(port = PORT) {
+  return app.listen(port, () => {
+    console.log(`DreamsLab Cloud Vault API running on http://localhost:${port}`);
     console.log(`Database storage: ${DB_FILE}`);
   });
 }
 
-module.exports = { app, db, loadDatabase, saveDatabase };
+// Start Server if executed directly
+if (require.main === module) {
+  startServer(PORT);
+}
+
+module.exports = { app, db, loadDatabase, saveDatabase, startServer };
+
