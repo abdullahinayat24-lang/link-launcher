@@ -1,18 +1,34 @@
-const { app, BrowserWindow, ipcMain, shell } = require('electron');
-const path = require('path');
-const fs = require('fs');
-const https = require('https');
-const crypto = require('crypto');
-const { spawn } = require('child_process');
+// Detect runtime: Node.js cloud server (Render, Railway, etc.) vs Electron desktop app
+let electron;
+try {
+  electron = require('electron');
+} catch (e) {}
 
-// Single Instance Lock: prevents duplicate processes and installer conflicts
-const gotTheLock = app.requestSingleInstanceLock();
-if (!gotTheLock) {
-  app.quit();
-  process.exit(0);
+if (!electron || typeof electron !== 'object' || !electron.app) {
+  console.log('DreamsLab: Running in Node.js server environment.');
+  console.log('Starting Cloud Vault API backend...');
+  const { startServer } = require('./server/server.js');
+  startServer();
+} else {
+  runDesktopApplication(electron);
 }
 
-let mainWindow;
+function runDesktopApplication(electron) {
+  const { app, BrowserWindow, ipcMain, shell } = electron;
+  const path = require('path');
+  const fs = require('fs');
+  const https = require('https');
+  const crypto = require('crypto');
+  const { spawn } = require('child_process');
+
+  // Single Instance Lock: prevents duplicate processes and installer conflicts
+  const gotTheLock = app.requestSingleInstanceLock();
+  if (!gotTheLock) {
+    app.quit();
+    process.exit(0);
+  }
+
+  let mainWindow;
 
 function isValidHtmlPackage(content) {
   if (!content || typeof content !== 'string') return false;
@@ -532,15 +548,16 @@ ipcMain.handle('reset-local-vault', async () => {
   }
 });
 
-// Security Hardening: Validate protocol in open-external
-ipcMain.handle('open-external', async (event, url) => {
-  try {
-    if (!url || typeof url !== 'string') return false;
-    const parsed = new URL(url);
-    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
-      shell.openExternal(url);
-      return true;
-    }
-  } catch(e) {}
-  return false;
-});
+  ipcMain.handle('open-external', async (event, url) => {
+    try {
+      if (!url || typeof url !== 'string') return false;
+      const parsed = new URL(url);
+      if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+        shell.openExternal(url);
+        return true;
+      }
+    } catch(e) {}
+    return false;
+  });
+}
+
