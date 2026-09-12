@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: dreamslab-cloud-vault
+    runtime: node
+    rootDir: server
+    buildCommand: npm install
+    startCommand: node server.js
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ALLOWED_ORIGINS
+        value: https://abdullahinayat24-lang.github.io,http://localhost:3000
