@@ -1751,7 +1751,7 @@
       currentUserEmail = email.toLowerCase();
       localStorage.setItem('dreamslab_last_email', currentUserEmail);
 
-      // Sign Up / Create Account Mode:
+      // Create Account Mode
       if (isCreatePasswordMode) {
         const confirmPass = confirmInput ? confirmInput.value.trim() : '';
         if (!confirmPass) {
@@ -1786,7 +1786,7 @@
         return;
       }
 
-      // Normal Sign In / Unlock Mode:
+      // Normal Unlock Mode — STRICT: Only the unique master password decrypts
       errorEl.textContent = '';
       let rawStored = localStorage.getItem(STORAGE_KEY);
       if (!rawStored && window.electronAPI && window.electronAPI.restoreFromDocuments) {
@@ -1797,28 +1797,14 @@
       }
 
       let loadedVault = null;
-      let needsReEncrypt = false;
 
       if (rawStored) {
         try {
           const encrypted = JSON.parse(rawStored);
-          try {
-            loadedVault = await decryptData(encrypted, pass);
-          } catch(err1) {
-            const candidatePasswords = ['5746', '8105746', 'Lhana!472580'];
-            for (const cand of candidatePasswords) {
-              if (cand === pass) continue;
-              try {
-                loadedVault = await decryptData(encrypted, cand);
-                if (loadedVault) {
-                  needsReEncrypt = true;
-                  break;
-                }
-              } catch(err2) {}
-            }
-          }
-        } catch(parseErr) {
-          console.warn('Raw stored parse error:', parseErr);
+          loadedVault = await decryptData(encrypted, pass);
+        } catch(decryptErr) {
+          errorEl.textContent = '❌ Incorrect password. Decryption failed.';
+          return;
         }
       }
 
@@ -1833,9 +1819,6 @@
           };
         }
         normalizeVaultLinks();
-        if (needsReEncrypt) {
-          await saveVault();
-        }
         document.getElementById('lockScreen').style.display = 'none';
         if (window.electronAPI && window.electronAPI.detectLocalChromeProfiles) {
           await syncLocalChromeProfiles();
@@ -1846,8 +1829,12 @@
         return;
       }
 
-      // If local decryption failed, check if user is ranakaharian1 with Lhana!472580 to auto-pull
-      if (currentUserEmail === 'ranakaharian1@gmail.com' && (pass === 'Lhana!472580' || pass === '5746')) {
+      // Brand new machine setup (no local vault yet) — ONLY unique master password allowed
+      if (currentUserEmail === 'ranakaharian1@gmail.com') {
+        if (pass !== 'Lhana!472580') {
+          errorEl.textContent = '❌ Incorrect password.';
+          return;
+        }
         currentPassword = pass;
         vaultData = {
           userEmail: currentUserEmail,
@@ -1866,1066 +1853,11 @@
         await saveVault();
         document.getElementById('lockScreen').style.display = 'none';
         renderApp();
-        showToast(`✅ Welcome, ${currentUserEmail}! Pulling cloud links...`);
+        showToast(`✅ Welcome, ${currentUserEmail}!`);
         return;
       }
 
       errorEl.textContent = '❌ Incorrect email or password. Decryption failed.';
-    }
-
-    function lockVault() {
-      currentPassword = null;
-      checkLockScreenState();
-      document.getElementById('lockScreen').style.display = 'flex';
-      closeDetailDrawer();
-      showToast('🔒 Vault locked');
-    }
-
-    /* ==========================================================================
-       DATA NORMALIZATION & PROFILE SYNC
-       ========================================================================== */
-    function normalizeVaultLinks() {
-      if (!Array.isArray(vaultData.links)) vaultData.links = [];
-      if (!Array.isArray(vaultData.profiles)) vaultData.profiles = [];
-      if (!Array.isArray(vaultData.categories)) vaultData.categories = ['General'];
-
-      vaultData.links.forEach(l => {
-        if (!l.id) l.id = 'link_' + Math.random().toString(36).substr(2, 9);
-        if (!l.priority) l.priority = 'normal';
-        if (l.starred === undefined) l.starred = false;
-        if (l.isTask === undefined) l.isTask = (l.priority === 'high');
-        if (l.taskDone === undefined) l.taskDone = false;
-      });
-    }
-
-    let localDetectedProfiles = [];
-
-    const PROFILE_CONFIGS = {
-      'datatransferidflthurles@gmail.com': { name: 'Work Thurles', shortName: 'Work Thurles', color: '#00838f', letter: 'W' },
-      'comicsexplainedinhindi@gmail.com': { name: 'Entertaindo', shortName: 'Entertaindo', color: '#1a73e8', letter: 'E' },
-      'r.abdullah.artist@gmail.com': { name: 'Your Chrome', shortName: 'Your Chrome', color: '#8e24aa', letter: 'Y' },
-      'abdullahinayat24@gmail.com': { name: 'Rana (abdullahinayat24)', shortName: 'Rana (abdullahinayat24)', color: '#188038', letter: 'R' },
-      'rana.abdullah.inayat@gmail.com': { name: 'Rana (rana.abdullah.inayat)', shortName: 'Rana (rana.abdullah.inayat)', color: '#f29900', letter: 'R' },
-      'demoghal786@gmail.com': { name: 'Asghar', shortName: 'Asghar', color: '#00897b', letter: 'A' },
-      'sara.jane.1529@gmail.com': { name: 'Sara', shortName: 'Sara', color: '#e91e63', letter: 'S' },
-      'sumaiyan913@gmail.com': { name: 'Sumaiya', shortName: 'Sumaiya', color: '#9c27b0', letter: 'S' },
-      'airah.abdullah.26@gmail.com': { name: 'Airah', shortName: 'Airah', color: '#ec407a', letter: 'A' },
-      'mythos.tester1@gmail.com': { name: 'Mythos1', shortName: 'Mythos1', color: '#ff5722', letter: 'M' },
-      'mythos.tester2@gmail.com': { name: 'Mythos2', shortName: 'Mythos2', color: '#0288d1', letter: 'M' },
-      'mythos.tester3@gmail.com': { name: 'Mythos3', shortName: 'Mythos3', color: '#d32f2f', letter: 'M' },
-      'mythos.tester4@gmail.com': { name: 'Mythos4', shortName: 'Mythos4', color: '#2e7d32', letter: 'M' },
-      'mythos.tester5@gmail.com': { name: 'Mythos5', shortName: 'Mythos5', color: '#f57c00', letter: 'M' },
-      'idigitalfun@gmail.com': { name: 'i Digital Fun', shortName: 'i Digital Fun', color: '#00acc1', letter: 'i' },
-      'idflmobile@gmail.com': { name: 'Work', shortName: 'Work', color: '#3949ab', letter: 'W' },
-      'sligo@esquirescoffee.ie': { name: 'Esquires Coffee', shortName: 'Esquires Coffee', color: '#6d4c41', letter: 'E' },
-      'abdullahdublinbranding@gmail.com': { name: 'Dublin Branding', shortName: 'Dublin Branding', color: '#00695c', letter: 'D' }
-    };
-
-    function getProfileMeta(emailOrFolder, fallbackName) {
-      const email = (emailOrFolder || '').toLowerCase().trim();
-      if (email && PROFILE_CONFIGS[email]) {
-        return PROFILE_CONFIGS[email];
-      }
-      for (const [k, cfg] of Object.entries(PROFILE_CONFIGS)) {
-        if ((email && email.includes(k)) || (fallbackName && fallbackName.toLowerCase() === cfg.name.toLowerCase()) || (fallbackName && fallbackName.toLowerCase() === cfg.shortName.toLowerCase())) {
-          return cfg;
-        }
-      }
-      let hash = 0;
-      const strForHash = email || fallbackName || 'Default';
-      for (let i = 0; i < strForHash.length; i++) hash = strForHash.charCodeAt(i) + ((hash << 5) - hash);
-      const color = GOOGLE_AVATAR_COLORS[Math.abs(hash) % GOOGLE_AVATAR_COLORS.length];
-      const name = fallbackName || (email ? email.split('@')[0] : 'Default');
-      return { name: name, shortName: name, color: color, letter: name.charAt(0).toUpperCase() };
-    }
-
-    function getLocalEmailsSet() {
-      const set = new Set();
-      (localDetectedProfiles || []).forEach(lp => {
-        const email = (lp.email || '').toLowerCase().trim();
-        if (email) set.add(email);
-      });
-      return set;
-    }
-
-    // Scopes links to this PC's local Chrome profiles if filterToLocalOnly is enabled
-    function getScopedLinks() {
-      if (!filterToLocalOnly || !localDetectedProfiles || localDetectedProfiles.length === 0) {
-        return vaultData.links || [];
-      }
-      const localEmails = getLocalEmailsSet();
-      if (localEmails.size === 0) return vaultData.links || [];
-      return (vaultData.links || []).filter(l => {
-        const lEmail = (l.profileEmail || '').toLowerCase().trim();
-        if (!lEmail) return true;
-        return localEmails.has(lEmail);
-      });
-    }
-
-    function toggleProfileScope() {
-      filterToLocalOnly = !filterToLocalOnly;
-      renderApp();
-      showToast(filterToLocalOnly ? '💻 Showing profiles on this PC' : '☁️ Showing all cloud profiles');
-    }
-
-    function getProfileForLink(link) {
-      if (!link) {
-        const meta = getProfileMeta('', 'Default');
-        return { name: 'Default', email: '', folder: 'Default', color: meta.color, letter: meta.letter, isLocal: false };
-      }
-      const linkEmail = (link.profileEmail || '').toLowerCase().trim();
-
-      const localMatch = localDetectedProfiles.find(lp =>
-        (linkEmail && lp.email && lp.email.toLowerCase().trim() === linkEmail) ||
-        (!linkEmail && link.profileName && lp.name && lp.name.toLowerCase() === link.profileName.toLowerCase())
-      );
-
-      let p = null;
-      if (linkEmail) {
-        p = vaultData.profiles.find(x => x.email && x.email.toLowerCase().trim() === linkEmail);
-      }
-      if (!p && link.profileId) {
-        p = vaultData.profiles.find(x => x.id === link.profileId);
-      }
-
-      const meta = getProfileMeta(linkEmail || (p && p.email) || '', (p && p.name) || link.profileName || 'Default');
-
-      return {
-        id: p ? p.id : (link.profileId || ''),
-        name: meta.name || (p && p.name) || link.profileName || 'Default',
-        email: linkEmail || (p && p.email) || '',
-        folder: localMatch ? localMatch.folder : (p && p.folder ? p.folder : 'Default'),
-        color: meta.color,
-        letter: meta.letter,
-        isLocal: !!localMatch
-      };
-    }
-
-    async function syncLocalChromeProfiles() {
-      if (!window.electronAPI || !window.electronAPI.detectLocalChromeProfiles) return;
-      try {
-        const res = await window.electronAPI.detectLocalChromeProfiles();
-        if (res && res.success && Array.isArray(res.profiles)) {
-          localDetectedProfiles = res.profiles;
-          let updated = false;
-          res.profiles.forEach(localP => {
-            const localEmail = (localP.email || '').toLowerCase().trim();
-            const match = vaultData.profiles.find(p =>
-              (localEmail && p.email && p.email.toLowerCase().trim() === localEmail)
-            );
-            if (match) {
-              match.folder = localP.folder;
-              if (localP.email && !match.email) match.email = localP.email;
-              if (localP.name && (!match.name || match.name === 'Default')) match.name = localP.name;
-              updated = true;
-            } else if (localEmail) {
-              const meta = getProfileMeta(localEmail, localP.name);
-              vaultData.profiles.push({
-                id: 'prof_' + Math.random().toString(36).substr(2, 9),
-                name: meta.name || localP.name || localP.folder,
-                email: localP.email,
-                folder: localP.folder,
-                notes: ''
-              });
-              updated = true;
-            }
-          });
-          if (updated) {
-            await saveVault();
-          }
-          renderApp();
-          showToast('🔄 Chrome profiles detected & synced!');
-        }
-      } catch (err) {
-        console.warn('Profile detection:', err);
-      }
-    }
-
-    /* ==========================================================================
-       MAIN RENDER ENGINE
-       ========================================================================== */
-    function renderApp() {
-      normalizeVaultLinks();
-      updateNavigationCounts();
-      renderSidebarProfiles();
-      renderSidebarCategories();
-      renderCategoryChips();
-      renderLinksStream();
-      renderTasksList();
-      const scopeBtn = document.getElementById('btnToggleScope');
-      if (scopeBtn) {
-        scopeBtn.textContent = filterToLocalOnly ? '💻 This PC (' + getScopedLinks().length + ')' : '☁️ All Cloud (' + vaultData.links.length + ')';
-        scopeBtn.title = filterToLocalOnly ? 'Click to show all cloud profiles' : 'Click to show only this PC profiles';
-      }
-    }
-
-    function updateNavigationCounts() {
-      const scoped = getScopedLinks();
-      document.getElementById('countAll').textContent = scoped.length;
-      document.getElementById('countStarred').textContent = scoped.filter(l => l.starred).length;
-      document.getElementById('countHigh').textContent = scoped.filter(l => l.priority === 'high').length;
-      document.getElementById('countMedium').textContent = scoped.filter(l => l.priority === 'medium').length;
-      document.getElementById('countLow').textContent = scoped.filter(l => l.priority === 'low').length;
-    }
-
-    function renderSidebarProfiles() {
-      const container = document.getElementById('sidebarProfilesList');
-      let html = '';
-
-      const profileMap = new Map();
-      const localEmails = getLocalEmailsSet();
-
-      // 1. Local profiles on this machine
-      (localDetectedProfiles || []).forEach(lp => {
-        const email = (lp.email || '').toLowerCase().trim();
-        const key = email || lp.folder.toLowerCase();
-        const meta = getProfileMeta(email, lp.name);
-        profileMap.set(key, {
-          id: 'local_' + key,
-          name: meta.name || lp.name,
-          email: lp.email || '',
-          folder: lp.folder,
-          color: meta.color,
-          letter: meta.letter,
-          isLocal: true
-        });
-      });
-
-      // 2. Vault profiles (always show all accounts so none are hidden)
-      (vaultData.profiles || []).forEach(p => {
-        const email = (p.email || '').toLowerCase().trim();
-        const key = email || (p.id || p.folder || '').toLowerCase();
-        const isLoc = localEmails.has(email);
-        if (key && !profileMap.has(key)) {
-          const meta = getProfileMeta(email, p.name);
-          profileMap.set(key, {
-            id: p.id || ('prof_' + key),
-            name: meta.name || p.name,
-            email: p.email || '',
-            folder: p.folder || 'Default',
-            color: meta.color,
-            letter: meta.letter,
-            isLocal: isLoc
-          });
-        }
-      });
-
-      // 3. Profiles from links (always show so every email with links is accessible)
-      (vaultData.links || []).forEach(l => {
-        const email = (l.profileEmail || '').toLowerCase().trim();
-        const isLoc = localEmails.has(email);
-        if (email && !profileMap.has(email)) {
-          const meta = getProfileMeta(email, l.profileName);
-          profileMap.set(email, {
-            id: 'prof_' + email,
-            name: meta.name || l.profileName,
-            email: l.profileEmail,
-            folder: l.profileFolder || 'Default',
-            color: meta.color,
-            letter: meta.letter,
-            isLocal: isLoc
-          });
-        }
-      });
-
-      if (profileMap.size === 0) {
-        container.innerHTML = `
-          <div style="padding: 10px 14px; font-size: 12px; color: var(--text-muted);">
-            No Chrome accounts detected.<br>
-            <button class="btn-tool" style="margin-top: 6px; font-size: 11px; padding: 4px 8px;" onclick="syncLocalChromeProfiles()">🔄 Detect Profiles</button>
-          </div>
-        `;
-        return;
-      }
-
-      profileMap.forEach((p, key) => {
-        const meta = getProfileMeta(p.email || p.folder, p.name);
-        const count = vaultData.links.filter(l => {
-          const linkEmail = (l.profileEmail || '').toLowerCase().trim();
-          if (p.email && linkEmail) {
-            return linkEmail === p.email.toLowerCase().trim();
-          }
-          if (p.name && l.profileName) {
-            return l.profileName.toLowerCase() === p.name.toLowerCase();
-          }
-          return false;
-        }).length;
-
-        const isActive = activeProfileEmail && (
-          (p.email && activeProfileEmail.toLowerCase() === p.email.toLowerCase()) ||
-          (p.id && activeProfileEmail === p.id)
-        );
-
-        html += `
-          <div class="account-item ${isActive ? 'active' : ''}" onclick="selectProfileFilter('${escapeHtml(p.email || p.id)}')">
-            <div style="display:flex; align-items:center; min-width:0; flex:1;">
-              <div class="account-avatar" style="background: ${meta.color}; color:#fff; font-weight:700;">${meta.letter}</div>
-              <div class="account-info">
-                <div class="account-name" style="font-weight:600; display:flex; align-items:center; gap:4px;">
-                  <span>${escapeHtml(meta.name)}</span>
-                  ${p.isLocal ? '<span title="Installed on this PC" style="display:inline-block; width:6px; height:6px; border-radius:50%; background:#188038;"></span>' : ''}
-                </div>
-                <div class="account-email">${escapeHtml(p.email || p.folder)}</div>
-              </div>
-            </div>
-            <span class="nav-badge">${count}</span>
-          </div>
-        `;
-      });
-
-      container.innerHTML = html;
-    }
-
-    function renderSidebarCategories() {
-      const container = document.getElementById('sidebarCategoriesList');
-      const cats = new Set(vaultData.categories || []);
-      vaultData.links.forEach(l => { if (l.category) cats.add(l.category); });
-
-      let html = '';
-      let colorIdx = 0;
-      cats.forEach(cat => {
-        const color = GOOGLE_AVATAR_COLORS[colorIdx % GOOGLE_AVATAR_COLORS.length];
-        colorIdx++;
-        const count = getScopedLinks().filter(l => l.category === cat).length;
-        const isActive = activeCategory === cat;
-
-        html += `
-          <div class="nav-item ${isActive ? 'active' : ''}" onclick="selectCategory('${escapeHtml(cat)}')">
-            <div class="nav-item-left">
-              <span class="chip-dot" style="background: ${color}; width:8px; height:8px; border-radius:50%;"></span>
-              <span class="nav-label">${escapeHtml(cat)}</span>
-            </div>
-            <span class="nav-badge">${count}</span>
-          </div>
-        `;
-      });
-      container.innerHTML = html;
-    }
-
-    function renderCategoryChips() {
-      const container = document.getElementById('categoryChipsContainer');
-      const cats = ['ALL', ...(vaultData.categories || [])];
-      let html = '';
-
-      cats.forEach(cat => {
-        const isActive = activeCategory === cat;
-        const count = cat === 'ALL' ? getScopedLinks().length : getScopedLinks().filter(l => l.category === cat).length;
-        html += `
-          <div class="category-chip ${isActive ? 'active' : ''}" onclick="selectCategory('${escapeHtml(cat)}')">
-            ${cat === 'ALL' ? 'All Items' : escapeHtml(cat)} (${count})
-          </div>
-        `;
-      });
-      container.innerHTML = html;
-    }
-
-    /* ==========================================================================
-       LINKS STREAM RENDER (GMAIL ROW FORMAT)
-       ========================================================================== */
-    function renderLinksStream() {
-      const container = document.getElementById('linksListContainer');
-      let filtered = [...getScopedLinks()];
-
-      // 1. Navigation View Filter
-      if (activeNavView === 'STARRED') filtered = filtered.filter(l => l.starred);
-      if (activeNavView === 'HIGH') filtered = filtered.filter(l => l.priority === 'high');
-      if (activeNavView === 'MEDIUM') filtered = filtered.filter(l => l.priority === 'medium');
-      if (activeNavView === 'LOW') filtered = filtered.filter(l => l.priority === 'low');
-
-      // 2. Profile / Account Filter
-      if (activeProfileEmail) {
-        filtered = filtered.filter(l => {
-          const p = getProfileForLink(l);
-          return (p.email && p.email.toLowerCase() === activeProfileEmail.toLowerCase()) || (p.id === activeProfileEmail);
-        });
-      }
-
-      // 3. Category Filter
-      if (activeCategory !== 'ALL') {
-        filtered = filtered.filter(l => l.category === activeCategory);
-      }
-
-      // 4. Search Filter
-      if (searchQuery) {
-        const q = searchQuery.toLowerCase();
-        filtered = filtered.filter(l => {
-          const matchTitle = (l.title || '').toLowerCase().includes(q);
-          const matchUrl = (l.url || '').toLowerCase().includes(q);
-          const matchNotes = (l.notes || '').toLowerCase().includes(q);
-          const matchCat = (l.category || '').toLowerCase().includes(q);
-          const prof = getProfileForLink(l);
-          const matchProf = (prof.name || '').toLowerCase().includes(q) || (prof.email || '').toLowerCase().includes(q);
-          return matchTitle || matchUrl || matchNotes || matchCat || matchProf;
-        });
-      }
-
-      // 5. Sort by Priority (High -> Medium -> Normal -> Low)
-      const WEIGHTS = { high: 3, medium: 2, normal: 1, low: 0 };
-      filtered.sort((a, b) => {
-        if (a.starred !== b.starred) return b.starred ? 1 : -1;
-        return (WEIGHTS[b.priority || 'normal'] || 1) - (WEIGHTS[a.priority || 'normal'] || 1);
-      });
-
-      if (filtered.length === 0) {
-        container.innerHTML = `
-          <div class="empty-stream-state">
-            <div class="empty-stream-icon">📭</div>
-            <div class="empty-stream-title">No Links Found</div>
-            <p style="font-size: 13px;">No bookmarks match your current view or filter.</p>
-            <button class="btn-primary" style="margin-top: 8px;" onclick="openAddLinkModal()">+ Add Link</button>
-          </div>
-        `;
-        return;
-      }
-
-      let html = '';
-      filtered.forEach(l => {
-        let domain = '';
-        try { domain = new URL(l.url).hostname; } catch(e) { domain = l.url; }
-        const faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
-        const prof = getProfileForLink(l);
-        const meta = getProfileMeta(prof.email || t.profileEmail || prof.folder, prof.name);
-        const launchFolder = prof.folder || 'Default';
-        const priority = l.priority || 'normal';
-        const isStarred = !!l.starred;
-
-        const prioClass = priority === 'high' ? 'prio-high' : (priority === 'medium' ? 'prio-medium' : (priority === 'low' ? 'prio-low' : 'prio-normal'));
-
-        html += `
-          <div class="link-row" onclick="openDetailDrawer('${l.id}')">
-            <!-- CHECKBOX -->
-            <input type="checkbox" class="link-checkbox" onclick="event.stopPropagation(); toggleSelectLink('${l.id}')">
-
-            <!-- STAR -->
-            <button class="link-star-btn ${isStarred ? 'starred' : ''}" onclick="toggleStarLink('${l.id}', event)" title="Star Link">
-              ${isStarred ? '★' : '☆'}
-            </button>
-
-            <!-- PRIORITY DOT -->
-            <div class="prio-dot ${prioClass}" title="Priority: ${priority.toUpperCase()}"></div>
-
-            <!-- PROFILE / SENDER -->
-            <div class="link-sender-col" title="${escapeHtml(meta.name)} (${escapeHtml(prof.email || prof.folder)})">
-              <span class="sender-avatar-badge" style="background: ${meta.color};">${meta.letter}</span>
-              <span class="sender-name-text">${escapeHtml(meta.name)}</span>
-            </div>
-
-            <!-- TITLE & SNIPPET -->
-            <div class="link-content-col">
-              <img src="${faviconUrl}" class="link-favicon-mini" onerror="this.src='favicon.png'">
-              <span class="link-title-text">${escapeHtml(l.title)}</span>
-              <span class="link-snippet-text">— ${escapeHtml(l.notes || l.url)}</span>
-            </div>
-
-            <!-- CATEGORY PILL -->
-            ${l.category ? `<span class="link-cat-pill">${escapeHtml(l.category)}</span>` : '<span></span>'}
-
-            <!-- HOVER ACTIONS -->
-            <div class="link-row-actions" onclick="event.stopPropagation()">
-              <button class="btn-row-action btn-row-run" onclick="launchChromeLink('${escapeHtml(launchFolder)}', '${escapeHtml(l.url)}', '${escapeHtml(prof.email || l.profileEmail || "")}')" title="Launch in Chrome (${escapeHtml(prof.name)})">
-                ▶ Run
-              </button>
-              <button class="btn-row-action" onclick="openDirectTab('${escapeHtml(l.url)}')" title="Open in default browser">
-                🌐
-              </button>
-              <button class="btn-row-action" onclick="copyLinkUrl('${escapeHtml(l.url)}')" title="Copy URL">
-                📋
-              </button>
-              <button class="btn-row-action" onclick="toggleTaskPin('${l.id}')" title="Pin to Tasks side panel">
-                📌
-              </button>
-              <button class="btn-row-action btn-row-delete" onclick="deleteLinkItem('${l.id}')" title="Delete">
-                🗑️
-              </button>
-            </div>
-          </div>
-        `;
-      });
-
-      container.innerHTML = html;
-    }
-
-    /* ==========================================================================
-       RIGHT SIDEBAR: GOOGLE TASKS RENDER
-       ========================================================================== */
-    function renderTasksList() {
-      const container = document.getElementById('tasksListContainer');
-      const taskLinks = getScopedLinks().filter(l => l.isTask);
-
-      if (taskLinks.length === 0) {
-        container.innerHTML = `
-          <div style="text-align: center; color: var(--text-muted); padding: 30px 10px; font-size: 12px;">
-            <div style="font-size: 28px; margin-bottom: 8px;">📌</div>
-            <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 4px;">No Tasks Pinned</div>
-            Click the 📌 pin button on any link to pull it into your daily tasks list.
-          </div>
-        `;
-        return;
-      }
-
-      let html = '';
-      taskLinks.forEach(t => {
-        const prof = getProfileForLink(t);
-        const meta = getProfileMeta(prof.email || t.profileEmail || prof.folder, prof.name);
-        const launchFolder = prof.folder || 'Default';
-
-        html += `
-          <div class="task-card ${t.taskDone ? 'completed' : ''}">
-            <div class="task-card-top">
-              <input type="checkbox" class="task-checkbox" ${t.taskDone ? 'checked' : ''} onchange="toggleTaskDone('${t.id}')">
-              <div class="task-title" onclick="openDetailDrawer('${t.id}')">${escapeHtml(t.title)}</div>
-            </div>
-            <div class="task-card-bottom">
-              <span class="task-account-badge" style="display: flex; align-items: center; gap: 4px;">
-                <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: ${meta.color}; flex-shrink: 0;"></span>
-                <span>${escapeHtml(meta.name)}</span>
-              </span>
-              <div style="display: flex; gap: 4px;">
-                <button class="btn-row-action btn-row-run" style="height: 24px; padding: 0 6px; font-size: 10px;" onclick="launchChromeLink('${escapeHtml(launchFolder)}', '${escapeHtml(t.url)}', '${escapeHtml(prof.email || t.profileEmail || "")}')">
-                  ▶ Run
-                </button>
-                <button class="btn-row-action" style="height: 24px; padding: 0 4px;" onclick="toggleTaskPin('${t.id}')" title="Unpin Task">
-                  &times;
-                </button>
-              </div>
-            </div>
-          </div>
-        `;
-      });
-
-      container.innerHTML = html;
-    }
-
-    /* ==========================================================================
-       DETAIL DRAWER & ACTIONS
-       ========================================================================== */
-    function openDetailDrawer(id) {
-      const item = vaultData.links.find(l => l.id === id);
-      if (!item) return;
-
-      currentDrawerLinkId = id;
-      document.getElementById('drawerHeading').textContent = 'Edit: ' + (item.title || 'Link');
-      document.getElementById('drawerLinkId').value = item.id;
-      document.getElementById('drawerTitleInput').value = item.title || '';
-      document.getElementById('drawerUrlInput').value = item.url || '';
-      document.getElementById('drawerCategoryInput').value = item.category || '';
-      document.getElementById('drawerPrioritySelect').value = item.priority || 'normal';
-      document.getElementById('drawerNotesInput').value = item.notes || '';
-      document.getElementById('drawerTagsInput').value = (item.tags || []).join(', ');
-      document.getElementById('drawerStarredCheck').checked = !!item.starred;
-      document.getElementById('drawerTaskCheck').checked = !!item.isTask;
-
-      populateProfileSelect('drawerProfileSelect', item.profileEmail || item.profileId || item.profileFolder);
-      populateCategoryDatalist('drawerCategoryDatalist');
-
-      document.getElementById('detailDrawer').classList.add('open');
-    }
-
-    function closeDetailDrawer() {
-      document.getElementById('detailDrawer').classList.remove('open');
-      currentDrawerLinkId = null;
-    }
-
-    function saveDrawerDetails(e) {
-      e.preventDefault();
-      const id = document.getElementById('drawerLinkId').value;
-      const item = vaultData.links.find(l => l.id === id);
-      if (!item) return;
-
-      item.title = document.getElementById('drawerTitleInput').value.trim();
-      item.url = document.getElementById('drawerUrlInput').value.trim();
-      const profVal = document.getElementById('drawerProfileSelect').value;
-      const prof = vaultData.profiles.find(p => p.id === profVal || p.email === profVal || p.folder === profVal) || { name: 'Default', folder: 'Default', email: '' };
-
-      item.profileId = prof.id || '';
-      item.profileEmail = prof.email || '';
-      item.profileName = prof.name || '';
-      item.profileFolder = prof.folder || 'Default';
-
-      const cat = document.getElementById('drawerCategoryInput').value.trim() || 'General';
-      item.category = cat;
-      item.priority = document.getElementById('drawerPrioritySelect').value || 'normal';
-      item.notes = document.getElementById('drawerNotesInput').value.trim();
-      item.tags = document.getElementById('drawerTagsInput').value.split(',').map(t => t.trim()).filter(Boolean);
-      item.starred = document.getElementById('drawerStarredCheck').checked;
-      item.isTask = document.getElementById('drawerTaskCheck').checked;
-
-      if (!vaultData.categories.includes(cat)) vaultData.categories.push(cat);
-
-      saveVault();
-      renderApp();
-      closeDetailDrawer();
-      showToast('✅ Link details saved!');
-    }
-
-    function launchCurrentDrawerLink() {
-      const item = vaultData.links.find(l => l.id === currentDrawerLinkId);
-      if (item) {
-        const prof = getProfileForLink(item);
-        launchChromeLink(prof.folder || 'Default', item.url, prof.email || item.profileEmail || '');
-      }
-    }
-
-    function deleteCurrentDrawerLink() {
-      if (confirm('Are you sure you want to delete this link?')) {
-        vaultData.links = vaultData.links.filter(l => l.id !== currentDrawerLinkId);
-        saveVault();
-        closeDetailDrawer();
-        renderApp();
-        showToast('🗑️ Link deleted');
-      }
-    }
-
-    /* ==========================================================================
-       LINK & TASK QUICK TOGGLES
-       ========================================================================== */
-    function toggleStarLink(id, e) {
-      if (e) e.stopPropagation();
-      const item = vaultData.links.find(l => l.id === id);
-      if (!item) return;
-      item.starred = !item.starred;
-      saveVault();
-      renderApp();
-      showToast(item.starred ? '⭐ Starred' : '☆ Unstarred');
-    }
-
-    function toggleTaskPin(id) {
-      const item = vaultData.links.find(l => l.id === id);
-      if (!item) return;
-      item.isTask = !item.isTask;
-      saveVault();
-      renderApp();
-      showToast(item.isTask ? '📌 Pinned to Tasks' : 'Unpinned from Tasks');
-    }
-
-    function toggleTaskDone(id) {
-      const item = vaultData.links.find(l => l.id === id);
-      if (!item) return;
-      item.taskDone = !item.taskDone;
-      saveVault();
-      renderTasksList();
-      const scopeBtn = document.getElementById('btnToggleScope');
-      if (scopeBtn) {
-        scopeBtn.textContent = filterToLocalOnly ? '💻 This PC (' + getScopedLinks().length + ')' : '☁️ All Cloud (' + vaultData.links.length + ')';
-        scopeBtn.title = filterToLocalOnly ? 'Click to show all cloud profiles' : 'Click to show only this PC profiles';
-      }
-    }
-
-    function clearCompletedTasks() {
-      vaultData.links.forEach(l => { if (l.isTask && l.taskDone) l.isTask = false; });
-      saveVault();
-      renderApp();
-      showToast('Completed tasks cleared');
-    }
-
-    function toggleTaskPanel() {
-      const sidebar = document.getElementById('tasksSidebar');
-      const btn = document.getElementById('btnStripTasks');
-      sidebar.classList.toggle('collapsed');
-      btn.classList.toggle('active');
-    }
-
-    function selectNavView(view) {
-      activeNavView = view;
-      activeProfileEmail = null;
-      document.querySelectorAll('.sidebar-left .nav-item').forEach(el => el.classList.remove('active'));
-      document.querySelectorAll('.sidebar-left .account-item').forEach(el => el.classList.remove('active'));
-
-      const navEl = document.getElementById('nav' + view.charAt(0) + view.slice(1).toLowerCase());
-      if (navEl) navEl.classList.add('active');
-
-      renderLinksStream();
-    }
-
-    function selectProfileFilter(emailOrId) {
-      activeProfileEmail = emailOrId;
-      activeNavView = 'ALL';
-      document.querySelectorAll('.sidebar-left .nav-item').forEach(el => el.classList.remove('active'));
-      renderSidebarProfiles();
-      renderLinksStream();
-    }
-
-    function selectCategory(cat) {
-      activeCategory = cat;
-      renderSidebarCategories();
-      renderCategoryChips();
-      renderLinksStream();
-    }
-
-    function handleSearch(val) {
-      searchQuery = (val || '').trim();
-      document.getElementById('searchClearBtn').style.display = searchQuery ? 'block' : 'none';
-      renderLinksStream();
-    }
-
-    function clearSearch() {
-      document.getElementById('globalSearchInput').value = '';
-      handleSearch('');
-    }
-
-    /* ==========================================================================
-       HELPERS & LAUNCH HANDLERS
-       ========================================================================== */
-    function populateProfileSelect(selectId, selectedVal) {
-      const select = document.getElementById(selectId);
-      if (!select) return;
-      select.innerHTML = '';
-
-      const seen = new Set();
-      const optionsList = [];
-
-      (localDetectedProfiles || []).forEach(lp => {
-        const email = (lp.email || '').toLowerCase().trim();
-        const key = email || lp.folder.toLowerCase();
-        if (!seen.has(key)) {
-          seen.add(key);
-          const meta = getProfileMeta(email, lp.name);
-          optionsList.push({
-            id: 'prof_' + key,
-            name: meta.name || lp.name,
-            email: lp.email || '',
-            folder: lp.folder
-          });
-        }
-      });
-
-      (vaultData.profiles || []).forEach(p => {
-        const email = (p.email || '').toLowerCase().trim();
-        const key = email || (p.id || p.folder || '').toLowerCase();
-        if (key && !seen.has(key)) {
-          seen.add(key);
-          const meta = getProfileMeta(email, p.name);
-          optionsList.push({
-            id: p.id || ('prof_' + key),
-            name: meta.name || p.name,
-            email: p.email || '',
-            folder: p.folder || 'Default'
-          });
-        }
-      });
-
-      for (const [email, cfg] of Object.entries(PROFILE_CONFIGS)) {
-        if (!seen.has(email)) {
-          seen.add(email);
-          optionsList.push({
-            id: 'prof_' + email,
-            name: cfg.name,
-            email: email,
-            folder: 'Default'
-          });
-        }
-      }
-
-      if (optionsList.length === 0) {
-        select.innerHTML = '<option value="Default">Default Profile</option>';
-        return;
-      }
-
-      const selLower = (selectedVal || '').toLowerCase().trim();
-
-      optionsList.forEach(p => {
-        const opt = document.createElement('option');
-        opt.value = p.email || p.id || p.folder || 'Default';
-        opt.textContent = `${p.name}${p.email ? ' (' + p.email + ')' : ''}`;
-        if (selLower && (
-          (p.email && p.email.toLowerCase() === selLower) ||
-          (p.id && p.id.toLowerCase() === selLower) ||
-          (p.folder && p.folder.toLowerCase() === selLower) ||
-          opt.value.toLowerCase() === selLower
-        )) {
-          opt.selected = true;
-        }
-        select.appendChild(opt);
-      });
-    }
-
-    function populateCategoryDatalist(listId) {
-      const dl = document.getElementById(listId);
-      if (!dl) return;
-      dl.innerHTML = '';
-      const cats = new Set(vaultData.categories || []);
-      (vaultData.links || []).forEach(l => { if (l.category) cats.add(l.category); });
-      cats.forEach(c => {
-        const opt = document.createElement('option');
-        opt.value = c;
-        dl.appendChild(opt);
-      });
-    }
-
-    function autoFetchTitleForNew(url) {
-      const input = document.getElementById('newLinkTitle');
-      if (!input || input.value.trim() !== '') return;
-      if (!url) return;
-      try {
-        let clean = url.trim();
-        if (!clean.startsWith('http://') && !clean.startsWith('https://')) clean = 'https://' + clean;
-        const parsed = new URL(clean);
-        const host = parsed.hostname.replace(/^www\./, '');
-        const brand = host.split('.')[0];
-        input.value = brand.charAt(0).toUpperCase() + brand.slice(1);
-      } catch(e) {}
-    }
-
-    async function launchChromeLink(folder, url, email) {
-      if (!url) return;
-      const targetEmail = email || '';
-      showToast('🚀 Launching Chrome in ' + (targetEmail || folder || 'Default'));
-      if (window.electronAPI && window.electronAPI.launchChromeProfile) {
-        try {
-          const res = await window.electronAPI.launchChromeProfile(folder, url, targetEmail);
-          if (!res || !res.success) {
-            if (window.electronAPI.openExternal) window.electronAPI.openExternal(url);
-            else window.open(url, '_blank');
-          }
-        } catch (e) {
-          if (window.electronAPI.openExternal) window.electronAPI.openExternal(url);
-          else window.open(url, '_blank');
-        }
-      } else {
-        window.open(url, '_blank');
-      }
-    }
-
-    function openDirectTab(url) {
-      if (!url) return;
-      if (window.electronAPI && window.electronAPI.openExternal) {
-        window.electronAPI.openExternal(url);
-      } else {
-        window.open(url, '_blank');
-      }
-      showToast('🌐 Opened in browser');
-    }
-
-    function copyLinkUrl(url) {
-      if (!url) return;
-      navigator.clipboard.writeText(url).then(() => {
-        showToast('📋 URL copied to clipboard');
-      }).catch(() => {
-        const ta = document.createElement('textarea');
-        ta.value = url;
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand('copy');
-        document.body.removeChild(ta);
-        showToast('📋 URL copied');
-      });
-    }
-
-    function deleteLinkItem(id) {
-      if (confirm('Are you sure you want to delete this link?')) {
-        vaultData.links = vaultData.links.filter(l => l.id !== id);
-        saveVault();
-        renderApp();
-        showToast('🗑️ Link deleted');
-      }
-    }
-
-    /* ==========================================================================
-       MODAL ACTIONS
-       ========================================================================== */
-    function openModal(id) {
-      document.getElementById(id).classList.add('open');
-    }
-    function closeModal(id) {
-      document.getElementById(id).classList.remove('open');
-    }
-
-    function openAddLinkModal() {
-      document.getElementById('newLinkUrl').value = '';
-      document.getElementById('newLinkTitle').value = '';
-      document.getElementById('newLinkCategory').value = activeCategory !== 'ALL' ? activeCategory : 'General';
-      document.getElementById('newLinkPriority').value = 'normal';
-      document.getElementById('newLinkNotes').value = '';
-      populateProfileSelect('newLinkProfileSelect', activeProfileEmail || (vaultData.profiles[0]?.email || 'Default'));
-      openModal('addLinkModal');
-    }
-
-    function saveNewLinkItem(e) {
-      e.preventDefault();
-      const url = document.getElementById('newLinkUrl').value.trim();
-      const title = document.getElementById('newLinkTitle').value.trim();
-      const profVal = document.getElementById('newLinkProfileSelect').value;
-      const category = document.getElementById('newLinkCategory').value.trim() || 'General';
-      const priority = document.getElementById('newLinkPriority').value || 'normal';
-      const notes = document.getElementById('newLinkNotes').value.trim();
-
-      let targetEmail = '';
-      let targetName = 'Default';
-      let targetFolder = 'Default';
-      let targetId = '';
-
-      const matchedProf = vaultData.profiles.find(p => p.id === profVal || (p.email && p.email.toLowerCase() === profVal.toLowerCase()) || p.folder === profVal);
-      if (matchedProf) {
-        targetId = matchedProf.id || ('prof_' + Math.random().toString(36).substr(2, 6));
-        targetEmail = matchedProf.email || '';
-        targetName = matchedProf.name || 'Default';
-        targetFolder = matchedProf.folder || 'Default';
-      } else if (profVal && profVal.includes('@')) {
-        targetEmail = profVal.toLowerCase().trim();
-        const meta = getProfileMeta(targetEmail);
-        targetName = meta.name;
-        targetId = 'prof_' + targetEmail;
-        targetFolder = 'Default';
-        vaultData.profiles.push({
-          id: targetId,
-          name: targetName,
-          email: targetEmail,
-          folder: targetFolder,
-          notes: ''
-        });
-      }
-
-      vaultData.links.push({
-        id: 'link_' + Math.random().toString(36).substr(2, 9),
-        url,
-        title,
-        profileId: targetId,
-        profileEmail: targetEmail,
-        profileName: targetName,
-        profileFolder: targetFolder,
-        category,
-        priority,
-        notes,
-        tags: [],
-        starred: false,
-        isTask: (priority === 'high'),
-        taskDone: false,
-        createdAt: new Date().toISOString()
-      });
-
-      if (!vaultData.categories.includes(category)) vaultData.categories.push(category);
-
-      saveVault();
-      closeModal('addLinkModal');
-      renderApp();
-      showToast('✅ Link added!');
-    }
-
-    function openAddProfileModal() {
-      document.getElementById('newProfName').value = '';
-      document.getElementById('newProfEmail').value = '';
-      document.getElementById('newProfFolder').value = '';
-      openModal('addProfileModal');
-    }
-
-    function saveNewProfileItem(e) {
-      e.preventDefault();
-      const name = document.getElementById('newProfName').value.trim();
-      const email = document.getElementById('newProfEmail').value.trim();
-      const folder = document.getElementById('newProfFolder').value.trim() || ('Profile ' + (vaultData.profiles.length + 1));
-
-      vaultData.profiles.push({
-        id: 'prof_' + Math.random().toString(36).substr(2, 9),
-        name,
-        email,
-        folder,
-        notes: ''
-      });
-
-      saveVault();
-      closeModal('addProfileModal');
-      renderApp();
-      showToast('✅ Chrome profile added!');
-    }
-
-    /* CLOUD SYNC & TUTORIAL */
-    function saveCloudCredentials() {
-      const token = document.getElementById('cloudTokenInput').value.trim();
-      const gistId = document.getElementById('cloudGistIdInput').value.trim();
-      const statusEl = document.getElementById('cloudSyncStatus');
-
-      vaultData.cloudConfig = { gistToken: token, gistId: gistId };
-      saveVault();
-      statusEl.style.color = '#188038';
-      statusEl.textContent = '💾 Cloud credentials saved securely to your account!';
-      showToast('💾 Cloud credentials saved');
-    }
-
-    
-    function openExternalDirect(url) {
-      if (!url) return;
-      if (window.electronAPI && window.electronAPI.openExternal) {
-        window.electronAPI.openExternal(url);
-      } else {
-        window.open(url, '_blank');
-      }
-    }
-
-    function toggleCloudGuide() {
-      const content = document.getElementById('cloudGuideContent');
-      const btn = document.getElementById('btnToggleCloudGuide');
-      if (!content) return;
-      if (content.style.display === 'none') {
-        content.style.display = 'flex';
-        btn.textContent = 'Hide Guide';
-      } else {
-        content.style.display = 'none';
-        btn.textContent = 'Show Guide';
-      }
-    }
-
-    function openCloudModal() {
-      document.getElementById('cloudTokenInput').value = vaultData.cloudConfig?.gistToken || '';
-      document.getElementById('cloudGistIdInput').value = vaultData.cloudConfig?.gistId || '';
-      document.getElementById('cloudSyncStatus').textContent = '';
-      openModal('cloudModal');
-    }
-
-    async function autoCreatePrivateGist() {
-      const tokenInput = document.getElementById('cloudTokenInput');
-      const token = (tokenInput.value || '').trim();
-      const statusEl = document.getElementById('cloudSyncStatus');
-
-      if (!token) {
-        statusEl.style.color = '#d93025';
-        statusEl.textContent = 'Please paste your GitHub Token first, then click Auto-Create Gist.';
-        tokenInput.focus();
-        return;
-      }
-
-      try {
-        statusEl.style.color = '#0b57d0';
-        statusEl.textContent = 'Creating private Gist on your GitHub account...';
-
-        const encrypted = await encryptData(vaultData, currentPassword);
-        const payload = {
-          description: 'DreamsLab Link Launcher Encrypted Vault',
-          public: false,
-          files: {
-            'dreamslab_vault.json': {
-              content: JSON.stringify(encrypted)
-            }
-          }
-        };
-
-        const res = await fetch('https://api.github.com/gists', {
-          method: 'POST',
-          headers: {
-            'Authorization': `token ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(payload)
-        });
-
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.message || 'GitHub API error (HTTP ' + res.status + ')');
-        }
-
-        const data = await res.json();
-        const newGistId = data.id;
-
-        document.getElementById('cloudGistIdInput').value = newGistId;
-        vaultData.cloudConfig = { gistToken: token, gistId: newGistId };
-        await saveVault();
-
-        statusEl.style.color = '#188038';
-        statusEl.textContent = '✨ Private Gist created! ID: ' + newGistId;
-        showToast('✨ Private Gist created & linked!');
-      } catch (err) {
-        statusEl.style.color = '#d93025';
-        statusEl.textContent = 'Auto-create failed: ' + err.message;
-      }
     }
 
     async function syncPushCloudVault() {
@@ -2938,21 +1870,13 @@
         return; 
       }
 
-      if (!vaultData.links || vaultData.links.length === 0) {
-        if (!confirm('Warning: Your vault has 0 links. Push will overwrite cloud with empty vault.\n\nClick Cancel to abort.')) {
-          statusEl.style.color = '#e37400';
-          statusEl.textContent = 'Push cancelled.';
-          return;
-        }
-      }
-
       try {
         statusEl.style.color = '#0b57d0';
         statusEl.textContent = 'Fetching cloud vault to merge...';
         vaultData.cloudConfig.gistToken = token;
         vaultData.cloudConfig.gistId = gistId;
 
-        // Step 1: fetch & decrypt current cloud vault so no data is ever lost
+        // Step 1: fetch cloud vault
         let cloudLinks = [], cloudCategories = [], cloudProfiles = [];
         try {
           const cloudRes = await fetch('https://api.github.com/gists/' + gistId, {
@@ -2972,24 +1896,65 @@
               }
             }
           }
-        } catch(e) { /* cloud fetch failed, push local only */ }
+        } catch(e) {}
 
-        // Step 2: MERGE — cloud-only links preserved, local wins on same id
-        const mergedMap = new Map();
-        cloudLinks.forEach(function(l) { mergedMap.set(l.id, l); });
-        (vaultData.links || []).forEach(function(l) { mergedMap.set(l.id, l); }); // local overwrites
-        const mergedLinks = Array.from(mergedMap.values());
+        const isDesktop = !!(window.electronAPI && window.electronAPI.detectLocalChromeProfiles);
+        const localEmails = getLocalEmailsSet();
+
+        let finalCloudLinks = [];
+        let finalCloudProfiles = [];
+
+        if (isDesktop && localEmails.size > 0) {
+          // On Desktop PC with specific local emails:
+          // Keep all cloud links that belong to OTHER PCs/emails
+          const otherPcLinks = cloudLinks.filter(l => {
+            const lEmail = (l.profileEmail || '').toLowerCase().trim();
+            return !localEmails.has(lEmail);
+          });
+          // Add this PC's links (adds, updates, deletions for local emails are reflected)
+          finalCloudLinks = [...otherPcLinks, ...(vaultData.links || [])];
+
+          const profMap = new Map();
+          cloudProfiles.forEach(p => {
+            const pEmail = (p.email || '').toLowerCase().trim();
+            if (pEmail) profMap.set(pEmail, p);
+          });
+          (vaultData.profiles || []).forEach(p => {
+            const pEmail = (p.email || '').toLowerCase().trim();
+            if (pEmail) profMap.set(pEmail, p);
+          });
+          finalCloudProfiles = Array.from(profMap.values());
+        } else {
+          // Online or full vault: update all
+          const linkMap = new Map();
+          cloudLinks.forEach(l => linkMap.set(l.id, l));
+          (vaultData.links || []).forEach(l => linkMap.set(l.id, l));
+          finalCloudLinks = Array.from(linkMap.values());
+
+          const profMap = new Map();
+          cloudProfiles.forEach(p => {
+            const pEmail = (p.email || '').toLowerCase().trim();
+            if (pEmail) profMap.set(pEmail, p);
+          });
+          (vaultData.profiles || []).forEach(p => {
+            const pEmail = (p.email || '').toLowerCase().trim();
+            if (pEmail) profMap.set(pEmail, p);
+          });
+          finalCloudProfiles = Array.from(profMap.values());
+        }
 
         const catSet = new Set([...DEFAULT_CATEGORIES, ...cloudCategories, ...(vaultData.categories || [])]);
 
-        const profileMap = new Map();
-        cloudProfiles.forEach(function(p) { profileMap.set(p.email, p); });
-        (vaultData.profiles || []).forEach(function(p) { profileMap.set(p.email, p); });
-        const mergedProfiles = Array.from(profileMap.values());
+        statusEl.textContent = 'Encrypting ' + finalCloudLinks.length + ' links & uploading...';
 
-        statusEl.textContent = 'Encrypting ' + mergedLinks.length + ' links & uploading...';
+        const mergedVault = {
+          userEmail: currentUserEmail || 'ranakaharian1@gmail.com',
+          links: finalCloudLinks,
+          categories: Array.from(catSet),
+          profiles: finalCloudProfiles,
+          cloudConfig: vaultData.cloudConfig
+        };
 
-        const mergedVault = { links: mergedLinks, categories: Array.from(catSet), profiles: mergedProfiles, cloudConfig: vaultData.cloudConfig };
         const encrypted = await encryptData(mergedVault, currentPassword);
         const payload = { files: { 'dreamslab_vault.json': { content: JSON.stringify(encrypted) } } };
 
@@ -3000,14 +1965,11 @@
         });
 
         if (pushRes.ok) {
-          vaultData.links = mergedLinks;
-          vaultData.categories = Array.from(catSet);
-          vaultData.profiles = mergedProfiles;
           await saveVault();
           renderApp();
           statusEl.style.color = '#188038';
-          statusEl.textContent = 'Synced ' + mergedLinks.length + ' links to Cloud!';
-          showToast('Cloud Vault updated!');
+          statusEl.textContent = `✅ Synced to Cloud! (Cloud has ${finalCloudLinks.length} total links across all PCs)`;
+          showToast('☁️ Cloud Vault updated!');
         } else {
           throw new Error('Gist update failed (HTTP ' + pushRes.status + ')');
         }
@@ -3044,12 +2006,12 @@
         try {
           decrypted = await decryptData(cloudEncrypted, currentPassword);
         } catch (decErr) {
-          const cloudPass = prompt('Cloud Vault was encrypted with a different password.\nEnter the master password for this cloud backup:');
+          const cloudPass = prompt('Enter the master password for this cloud vault:');
           if (cloudPass) {
             decrypted = await decryptData(cloudEncrypted, cloudPass.trim());
             currentPassword = cloudPass.trim();
           } else {
-            throw new Error('Decryption cancelled or password incorrect');
+            throw new Error('Decryption cancelled');
           }
         }
 
@@ -3057,131 +2019,75 @@
           throw new Error('Invalid cloud vault content');
         }
 
-        // MERGE — keep all cloud links, also keep local-only links not yet in cloud
-        const mergedMap = new Map();
-        (vaultData.links || []).forEach(function(l) { mergedMap.set(l.id, l); }); // local first
-        decrypted.links.forEach(function(l) { mergedMap.set(l.id, l); });          // cloud wins on conflict
-        vaultData.links = Array.from(mergedMap.values());
-
-        if (Array.isArray(decrypted.categories)) {
-          const catSet = new Set([...DEFAULT_CATEGORIES, ...(vaultData.categories || []), ...decrypted.categories]);
-          vaultData.categories = Array.from(catSet);
-        }
-
         vaultData.cloudConfig = { gistToken: token, gistId: gistId };
 
-        // Merge profiles — cloud wins on same email, keep local-only profiles
-        if (Array.isArray(decrypted.profiles)) {
-          const profileMap = new Map();
-          (vaultData.profiles || []).forEach(function(p) { profileMap.set(p.email, p); });
-          decrypted.profiles.forEach(function(p) { profileMap.set(p.email, p); });
-          vaultData.profiles = Array.from(profileMap.values());
-        }
-
-        if (window.electronAPI && window.electronAPI.detectLocalChromeProfiles) {
+        const isDesktop = !!(window.electronAPI && window.electronAPI.detectLocalChromeProfiles);
+        let localEmails = new Set();
+        if (isDesktop) {
           await syncLocalChromeProfiles();
+          localEmails = getLocalEmailsSet();
         }
 
-        normalizeVaultLinks();
-        await saveVault();
-        renderApp();
-        statusEl.style.color = '#188038';
-        statusEl.textContent = 'Restored ' + vaultData.links.length + ' links from Cloud!';
-        showToast('Pulled ' + vaultData.links.length + ' links from cloud!');
+        if (isDesktop && localEmails.size > 0) {
+          // RULE 2: Desktop PC with local Chrome profiles!
+          // Pull ONLY links and profiles that belong to this PC's local Chrome emails
+          vaultData.links = decrypted.links.filter(l => {
+            const lEmail = (l.profileEmail || '').toLowerCase().trim();
+            return localEmails.has(lEmail);
+          });
+
+          const profMap = new Map();
+          (decrypted.profiles || []).forEach(p => {
+            const pEmail = (p.email || '').toLowerCase().trim();
+            if (localEmails.has(pEmail)) profMap.set(pEmail, p);
+          });
+          (localDetectedProfiles || []).forEach(lp => {
+            const lpEmail = (lp.email || '').toLowerCase().trim();
+            if (lpEmail && !profMap.has(lpEmail)) {
+              const meta = getProfileMeta(lpEmail, lp.name);
+              profMap.set(lpEmail, {
+                id: 'prof_' + lpEmail,
+                name: meta.name || lp.name,
+                email: lp.email,
+                folder: lp.folder,
+                notes: ''
+              });
+            }
+          });
+          vaultData.profiles = Array.from(profMap.values());
+
+          if (Array.isArray(decrypted.categories)) {
+            const catSet = new Set([...DEFAULT_CATEGORIES, ...(vaultData.categories || []), ...decrypted.categories]);
+            vaultData.categories = Array.from(catSet);
+          }
+
+          normalizeVaultLinks();
+          await saveVault();
+          renderApp();
+          statusEl.style.color = '#188038';
+          statusEl.textContent = `✅ Restored ${vaultData.links.length} links for this PC!`;
+          showToast(`☁️ Pulled ${vaultData.links.length} links for local profiles`);
+        } else {
+          // RULE 3: Online browser (no local Chrome profiles detected)
+          // Pull ALL profiles and ALL links across all emails
+          vaultData.links = decrypted.links || [];
+          vaultData.profiles = decrypted.profiles || [];
+          if (Array.isArray(decrypted.categories)) {
+            const catSet = new Set([...DEFAULT_CATEGORIES, ...(vaultData.categories || []), ...decrypted.categories]);
+            vaultData.categories = Array.from(catSet);
+          }
+
+          normalizeVaultLinks();
+          await saveVault();
+          renderApp();
+          statusEl.style.color = '#188038';
+          statusEl.textContent = `✅ Restored all ${vaultData.links.length} links across all profiles!`;
+          showToast(`☁️ Pulled all ${vaultData.links.length} links from cloud!`);
+        }
       } catch (err) {
         statusEl.style.color = '#d93025';
         statusEl.textContent = 'Pull failed: ' + err.message;
       }
     }
 
-    /* BACKUP EXPORT / IMPORT */
-    function openLocalSaveModal() {
-      document.getElementById('localSaveStatus').textContent = '';
-      openModal('localSaveModal');
-    }
 
-    function exportVaultJson() {
-      const blob = new Blob([JSON.stringify(vaultData, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `DreamsLab_Vault_Backup_${new Date().toISOString().slice(0,10)}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-      showToast('💾 Backup exported');
-    }
-
-    async function handleImportJsonFile(e) {
-      const file = e.target.files[0];
-      if (!file) return;
-      const statusEl = document.getElementById('localSaveStatus');
-      try {
-        const text = await file.text();
-        const parsed = JSON.parse(text);
-        if (parsed.salt && parsed.iv && parsed.data) {
-          vaultData = await decryptData(parsed, currentPassword);
-        } else if (parsed.links && parsed.profiles) {
-          vaultData = parsed;
-        } else {
-          throw new Error('Unrecognized file format');
-        }
-        normalizeVaultLinks();
-        await saveVault();
-        renderApp();
-        statusEl.style.color = '#188038';
-        statusEl.textContent = '✅ Restored ' + vaultData.links.length + ' links!';
-        showToast('✅ Vault restored from backup');
-      } catch (err) {
-        statusEl.style.color = '#d93025';
-        statusEl.textContent = 'Import failed: ' + err.message;
-      }
-      e.target.value = '';
-    }
-
-    /* SOFTWARE UPDATES */
-    function openUpdateModal() {
-      openModal('updateModal');
-      checkLiveUpdates();
-    }
-
-    async function checkLiveUpdates() {
-      const statusEl = document.getElementById('updateStatusText');
-      statusEl.textContent = 'Connecting to DreamsLab GitHub release server...';
-      if (window.electronAPI && window.electronAPI.checkAndApplyUpdate) {
-        try {
-          const res = await window.electronAPI.checkAndApplyUpdate();
-          if (res && res.updated) {
-            statusEl.textContent = '✅ Latest update applied! Restart the app to view.';
-          } else {
-            statusEl.textContent = '✅ You are running the latest version of DreamsLab Launcher (v1.0.3).';
-          }
-        } catch (e) {
-          statusEl.textContent = 'Version up to date (v1.0.3).';
-        }
-      } else {
-        statusEl.textContent = 'Running live web engine (v1.0.3).';
-      }
-    }
-
-    function showToast(msg) {
-      const toast = document.getElementById('appToast');
-      toast.textContent = msg;
-      toast.classList.add('show');
-      setTimeout(() => toast.classList.remove('show'), 2800);
-    }
-
-    function escapeHtml(str) {
-      if (!str) return '';
-      return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-    }
-      window.addEventListener('DOMContentLoaded', () => {
-      checkLockScreenState();
-    });
-  </script>
-</body>
-</html>
