@@ -1,6 +1,7 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
+  isDesktop: true,
   isElectron: true,
   launchChromeProfile: (folder, url, email) => ipcRenderer.invoke('launch-chrome-profile', { folder, url, email }),
   detectLocalChromeProfiles: () => ipcRenderer.invoke('detect-local-chrome-profiles'),
