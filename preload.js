@@ -10,5 +10,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveToDocuments: (dataStr) => ipcRenderer.invoke('save-to-documents', dataStr),
   restoreFromDocuments: () => ipcRenderer.invoke('restore-from-documents'),
   resetLocalVault: () => ipcRenderer.invoke('reset-local-vault'),
-  onBackgroundUpdate: (callback) => ipcRenderer.on('background-update-ready', (_event, value) => callback(value))
+  onBackgroundUpdate: (callback) => ipcRenderer.on('background-update-ready', (_event, value) => callback(value)),
+  onUpdateAvailable: (callback) => ipcRenderer.on('update-available', (_event, value) => callback(value))
 });
