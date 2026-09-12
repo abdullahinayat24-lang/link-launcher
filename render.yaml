@@ -1,9 +1,9 @@
-services:
+﻿services:
   - type: web
     name: dreamslab-cloud-vault
     runtime: node
     rootDir: server
-    buildCommand: npm install
+    buildCommand: npm install --omit=dev
     startCommand: node server.js
     plan: free
     envVars:
