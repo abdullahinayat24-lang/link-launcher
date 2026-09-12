@@ -2,7 +2,7 @@ const { app, BrowserWindow, ipcMain, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const https = require('https');
-const { exec } = require('child_process');
+const { spawn } = require('child_process');
 
 // Single Instance Lock: prevents duplicate processes and installer conflicts
 const gotTheLock = app.requestSingleInstanceLock();
@@ -26,6 +26,20 @@ function getActiveHtmlPath() {
   return path.join(__dirname, 'index.html');
 }
 
+function getWindowIcon() {
+  const candidates = [
+    path.join(__dirname, 'app_icon.ico'),
+    path.join(__dirname, 'app_icon.png'),
+    path.join(__dirname, 'favicon.png'),
+    path.join(process.resourcesPath || '', 'app_icon.ico'),
+    path.join(process.resourcesPath || '', 'app_icon.png')
+  ];
+  for (const c of candidates) {
+    try { if (fs.existsSync(c)) return c; } catch(e) {}
+  }
+  return undefined;
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1320,
@@ -33,21 +47,26 @@ function createWindow() {
     minWidth: 950,
     minHeight: 650,
     backgroundColor: '#06080d',
-    icon: path.join(__dirname, 'app_icon.ico'),
-    title: 'DREAMSLABSTUDIO // Cyber Link Launcher v1.0.3',
+    icon: getWindowIcon(),
+    title: 'DreamsLab Cyber Launcher',
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
-      webSecurity: false
+      webSecurity: true // Security Hardening: Enable standard SOP and web security
     }
   });
 
   mainWindow.loadFile(getActiveHtmlPath());
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url);
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+        shell.openExternal(url);
+      }
+    } catch(e) {}
     return { action: 'deny' };
   });
 }
@@ -113,15 +132,50 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
 
-// IPC: Chrome launch (with dynamic email-to-folder resolution)
+// Chrome path resolution helper
+function findChromeExecutable() {
+  const localAppData = process.env.LOCALAPPDATA || '';
+  const progFiles = process.env.ProgramFiles || 'C:\\Program Files';
+  const progFilesX86 = process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)';
+
+  const candidatePaths = [
+    path.join(progFiles, 'Google', 'Chrome', 'Application', 'chrome.exe'),
+    path.join(progFilesX86, 'Google', 'Chrome', 'Application', 'chrome.exe'),
+    path.join(localAppData, 'Google', 'Chrome', 'Application', 'chrome.exe')
+  ];
+
+  for (const p of candidatePaths) {
+    try {
+      if (fs.existsSync(p)) return p;
+    } catch(e) {}
+  }
+  return null;
+}
+
+function findChromeUserDataDir() {
+  const localAppData = process.env.LOCALAPPDATA || '';
+  const appData = process.env.APPDATA || '';
+  const candidates = [
+    path.join(localAppData, 'Google', 'Chrome', 'User Data'),
+    path.join(appData, 'Google', 'Chrome', 'User Data')
+  ];
+  for (const c of candidates) {
+    try {
+      if (fs.existsSync(c)) return c;
+    } catch(e) {}
+  }
+  return null;
+}
+
+// IPC: Chrome launch (with dynamic email-to-folder resolution and safe spawn)
 ipcMain.handle('launch-chrome-profile', async (event, { folder, url, email }) => {
   let profileDir = 'Default';
+  const userDataDir = findChromeUserDataDir();
 
   // If email is provided, dynamically resolve local Chrome folder from Local State
-  if (email && typeof email === 'string' && email.trim()) {
+  if (email && typeof email === 'string' && email.trim() && userDataDir) {
     try {
-      const localAppData = process.env.LOCALAPPDATA || '';
-      const localStatePath = path.join(localAppData, 'Google', 'Chrome', 'User Data', 'Local State');
+      const localStatePath = path.join(userDataDir, 'Local State');
       if (fs.existsSync(localStatePath)) {
         const localStateRaw = fs.readFileSync(localStatePath, 'utf8');
         const localState = JSON.parse(localStateRaw);
@@ -148,69 +202,133 @@ ipcMain.handle('launch-chrome-profile', async (event, { folder, url, email }) =>
     profileDir = folder;
   }
 
-  let chromePath = 'chrome.exe';
-  const localAppData = process.env.LOCALAPPDATA || '';
-  const progFiles = process.env.ProgramFiles || 'C:\\Program Files';
-  const progFilesX86 = process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)';
+  const chromeExe = findChromeExecutable() || 'chrome.exe';
+  const targetUrl = (url && typeof url === 'string' && url.trim()) ? url.trim() : 'chrome://newtab';
 
-  const candidatePaths = [
-    path.join(progFiles, 'Google', 'Chrome', 'Application', 'chrome.exe'),
-    path.join(progFilesX86, 'Google', 'Chrome', 'Application', 'chrome.exe'),
-    path.join(localAppData, 'Google', 'Chrome', 'Application', 'chrome.exe')
-  ];
-
-  for (const p of candidatePaths) {
-    if (fs.existsSync(p)) {
-      chromePath = `"${p}"`;
-      break;
+  // Sanitize target URL
+  try {
+    const parsed = new URL(targetUrl);
+    if (!['http:', 'https:', 'chrome:'].includes(parsed.protocol)) {
+      return { success: false, error: 'Invalid URL protocol' };
+    }
+  } catch(e) {
+    if (!targetUrl.startsWith('chrome://')) {
+      return { success: false, error: 'Invalid URL format' };
     }
   }
 
-  const targetUrl = url || 'chrome://newtab';
-  const cmd = `start "" ${chromePath} --profile-directory="${profileDir}" "${targetUrl}"`;
-  console.log('Executing Chrome command:', cmd);
+  // Security Hardening: Use spawn with argument array rather than shell string concatenation
+  const args = [`--profile-directory=${profileDir}`, targetUrl];
+  console.log('Launching Chrome securely with spawn:', chromeExe, args);
 
   return new Promise((resolve) => {
-    exec(cmd, (error) => {
-      if (error) {
-        resolve({ success: false, error: error.message });
-      } else {
-        resolve({ success: true });
-      }
-    });
+    try {
+      const child = spawn(chromeExe, args, {
+        detached: true,
+        stdio: 'ignore'
+      });
+      child.unref();
+      resolve({ success: true, folder: profileDir });
+    } catch (error) {
+      console.error('Chrome spawn error:', error.message);
+      resolve({ success: false, error: error.message });
+    }
   });
 });
 
-// IPC: Chrome profiles
+// IPC: Chrome profile detection with structured diagnostics
 ipcMain.handle('detect-local-chrome-profiles', async () => {
   try {
-    const localAppData = process.env.LOCALAPPDATA || '';
-    const chromeUserData = path.join(localAppData, 'Google', 'Chrome', 'User Data');
-    const localStatePath = path.join(chromeUserData, 'Local State');
+    const chromeExe = findChromeExecutable();
+    const chromeUserData = findChromeUserDataDir();
 
-    if (!fs.existsSync(localStatePath)) {
-      return { success: false, error: 'Chrome Local State not found' };
+    if (!chromeExe && !chromeUserData) {
+      return {
+        success: false,
+        status: 'CHROME_NOT_INSTALLED',
+        profiles: [],
+        error: 'Google Chrome is not installed on this computer.'
+      };
     }
 
-    const localStateRaw = fs.readFileSync(localStatePath, 'utf8');
-    const localState = JSON.parse(localStateRaw);
-    const profileInfoCache = localState.profile?.info_cache || {};
+    if (!chromeUserData) {
+      return {
+        success: false,
+        status: 'NO_PROFILES',
+        profiles: [],
+        error: 'Chrome User Data directory not found.'
+      };
+    }
 
+    const localStatePath = path.join(chromeUserData, 'Local State');
+    if (!fs.existsSync(localStatePath)) {
+      return {
+        success: false,
+        status: 'NO_PROFILES',
+        profiles: [],
+        error: 'Chrome Local State file not found (Chrome has not been initialized on this user profile yet).'
+      };
+    }
+
+    let localState;
+    try {
+      const localStateRaw = fs.readFileSync(localStatePath, 'utf8');
+      localState = JSON.parse(localStateRaw);
+    } catch(parseErr) {
+      return {
+        success: false,
+        status: 'DETECTION_FAILED',
+        profiles: [],
+        error: 'Failed to parse Chrome Local State: ' + parseErr.message
+      };
+    }
+
+    const profileInfoCache = localState.profile?.info_cache || {};
     const detectedProfiles = [];
+    let hasProfilesWithEmail = false;
 
     for (const [folderName, info] of Object.entries(profileInfoCache)) {
-      const email = info.user_name || info.hosted_domain || '';
+      const email = (info.user_name || info.hosted_domain || '').toLowerCase().trim();
       const name = info.name || folderName;
+      if (email) hasProfilesWithEmail = true;
       detectedProfiles.push({
         folder: folderName,
         name: name,
-        email: email
+        email: email,
+        avatarIcon: info.avatar_icon || ''
       });
     }
 
-    return { success: true, profiles: detectedProfiles };
+    if (detectedProfiles.length === 0) {
+      return {
+        success: true,
+        status: 'NO_PROFILES',
+        profiles: [],
+        error: 'No Chrome profiles found in Local State.'
+      };
+    }
+
+    if (!hasProfilesWithEmail) {
+      return {
+        success: true,
+        status: 'NO_EMAILS',
+        profiles: detectedProfiles,
+        error: 'Chrome profiles were detected, but none are signed into a Google Account.'
+      };
+    }
+
+    return {
+      success: true,
+      status: 'PROFILES_FOUND',
+      profiles: detectedProfiles
+    };
   } catch (err) {
-    return { success: false, error: err.message };
+    return {
+      success: false,
+      status: 'DETECTION_FAILED',
+      profiles: [],
+      error: err.message
+    };
   }
 });
 
@@ -244,11 +362,11 @@ ipcMain.handle('check-and-apply-update', async () => {
           }
 
           if (currentContent.trim() === rawData.trim()) {
-            return resolve({ success: true, updated: false, version: 'v1.0.3', message: 'You are already running the latest version (v1.0.3)' });
+            return resolve({ success: true, updated: false, version: 'v1.0.6', message: 'You are already running the latest version (v1.0.6)' });
           }
 
           fs.writeFileSync(userHtmlPath, rawData, 'utf8');
-          resolve({ success: true, updated: true, version: 'v1.0.3', message: 'Successfully updated to latest version v1.0.3!' });
+          resolve({ success: true, updated: true, version: 'v1.0.6', message: 'Successfully updated to latest version v1.0.6!' });
         } catch (e) {
           resolve({ success: false, error: e.message });
         }
@@ -303,7 +421,15 @@ ipcMain.handle('reset-local-vault', async () => {
   }
 });
 
+// Security Hardening: Validate protocol in open-external
 ipcMain.handle('open-external', async (event, url) => {
-  shell.openExternal(url);
-  return true;
+  try {
+    if (!url || typeof url !== 'string') return false;
+    const parsed = new URL(url);
+    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+      shell.openExternal(url);
+      return true;
+    }
+  } catch(e) {}
+  return false;
 });
