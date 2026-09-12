@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const https = require('https');
+const crypto = require('crypto');
 const { spawn } = require('child_process');
 
 // Single Instance Lock: prevents duplicate processes and installer conflicts
@@ -102,50 +103,35 @@ function createWindow() {
   });
 }
 
+const CURRENT_APP_VERSION = '1.0.6';
+
 function checkBackgroundUpdate() {
-  const updateUrl = 'https://raw.githubusercontent.com/abdullahinayat24-lang/link-launcher/main/index.html?t=' + Date.now();
-  https.get(updateUrl, (res) => {
+  const manifestUrl = 'https://raw.githubusercontent.com/abdullahinayat24-lang/link-launcher/main/version.json?t=' + Date.now();
+  https.get(manifestUrl, (res) => {
     if (res.statusCode !== 200) return;
     let rawData = '';
     res.on('data', chunk => rawData += chunk);
     res.on('end', () => {
       try {
-        if (!isValidHtmlPackage(rawData)) {
-          console.warn('Background update downloaded invalid payload. Discarding.');
-          return;
-        }
-
-        const updateDir = path.join(app.getPath('userData'), 'update');
-        if (!fs.existsSync(updateDir)) fs.mkdirSync(updateDir, { recursive: true });
-        const userHtmlPath = path.join(updateDir, 'index.html');
-        const backupPath = path.join(updateDir, 'index.html.backup');
-
-        let currentContent = '';
-        if (fs.existsSync(userHtmlPath)) {
-          currentContent = fs.readFileSync(userHtmlPath, 'utf8');
-        } else {
-          const bundledPath = path.join(__dirname, 'index.html');
-          if (fs.existsSync(bundledPath)) {
-            try { currentContent = fs.readFileSync(bundledPath, 'utf8'); } catch(e) {}
-          }
-        }
-
-        if (currentContent.trim() !== rawData.trim()) {
-          // Preserve backup before writing new update
-          if (fs.existsSync(userHtmlPath)) {
-            try { fs.copyFileSync(userHtmlPath, backupPath); } catch(e) {}
-          }
-          fs.writeFileSync(userHtmlPath, rawData, 'utf8');
-          console.log('Background update validated and saved to user data directory!');
+        const manifest = JSON.parse(rawData);
+        if (manifest && manifest.version && manifest.version !== CURRENT_APP_VERSION) {
+          console.log(`[Update] New version ${manifest.version} available (current: ${CURRENT_APP_VERSION})`);
           if (mainWindow && !mainWindow.isDestroyed()) {
-            mainWindow.webContents.send('background-update-ready', { message: 'Latest update downloaded in background!' });
+            mainWindow.webContents.send('update-available', {
+              currentVersion: CURRENT_APP_VERSION,
+              latestVersion: manifest.version,
+              releaseNotes: manifest.releaseNotes || ''
+            });
           }
         }
       } catch (e) {
-        console.error('Background update check notice:', e.message);
+        console.warn('Background update check notice:', e.message);
       }
     });
-  }).on('error', () => {});
+  }).on('error', (err) => {
+    // Non-blocking offline resilience: do nothing if GitHub is unreachable
+    console.log('[Update] Offline or GitHub unavailable, skipping background update check.');
+  });
 }
 
 app.whenReady().then(() => {
@@ -416,52 +402,88 @@ ipcMain.handle('detect-local-chrome-profiles', async () => {
   }
 });
 
-// IPC: Live Self-Updating from GitHub (Writes to UserData/update with validation & backup)
+// IPC: Live Self-Updating from GitHub with Version Manifest & Integrity Verification
 ipcMain.handle('check-and-apply-update', async () => {
   return new Promise((resolve) => {
-    const updateUrl = 'https://raw.githubusercontent.com/abdullahinayat24-lang/link-launcher/main/index.html?t=' + Date.now();
-    https.get(updateUrl, (res) => {
-      if (res.statusCode !== 200) {
-        return resolve({ success: false, error: 'GitHub returned HTTP ' + res.statusCode });
+    const manifestUrl = 'https://raw.githubusercontent.com/abdullahinayat24-lang/link-launcher/main/version.json?t=' + Date.now();
+    https.get(manifestUrl, (mRes) => {
+      if (mRes.statusCode !== 200) {
+        return resolve({ success: false, error: 'Could not fetch update manifest from GitHub (HTTP ' + mRes.statusCode + ')' });
       }
-      let rawData = '';
-      res.on('data', chunk => rawData += chunk);
-      res.on('end', () => {
+      let manifestRaw = '';
+      mRes.on('data', chunk => manifestRaw += chunk);
+      mRes.on('end', () => {
+        let manifest;
         try {
-          if (!isValidHtmlPackage(rawData)) {
-            return resolve({ success: false, error: 'Downloaded update failed integrity checks' });
-          }
-          const updateDir = path.join(app.getPath('userData'), 'update');
-          if (!fs.existsSync(updateDir)) fs.mkdirSync(updateDir, { recursive: true });
-          const userHtmlPath = path.join(updateDir, 'index.html');
-          const backupPath = path.join(updateDir, 'index.html.backup');
-
-          let currentContent = '';
-          if (fs.existsSync(userHtmlPath)) {
-            currentContent = fs.readFileSync(userHtmlPath, 'utf8');
-          } else {
-            const bundledPath = path.join(__dirname, 'index.html');
-            if (fs.existsSync(bundledPath)) {
-              try { currentContent = fs.readFileSync(bundledPath, 'utf8'); } catch(e) {}
-            }
-          }
-
-          if (currentContent.trim() === rawData.trim()) {
-            return resolve({ success: true, updated: false, version: 'v1.0.6', message: 'You are already running the latest version (v1.0.6)' });
-          }
-
-          if (fs.existsSync(userHtmlPath)) {
-            try { fs.copyFileSync(userHtmlPath, backupPath); } catch(e) {}
-          }
-
-          fs.writeFileSync(userHtmlPath, rawData, 'utf8');
-          resolve({ success: true, updated: true, version: 'v1.0.6', message: 'Successfully updated to latest version v1.0.6!' });
-        } catch (e) {
-          resolve({ success: false, error: e.message });
+          manifest = JSON.parse(manifestRaw);
+        } catch(e) {
+          return resolve({ success: false, error: 'Invalid update manifest format' });
         }
+
+        if (!manifest || !manifest.version) {
+          return resolve({ success: false, error: 'Manifest missing version number' });
+        }
+
+        if (manifest.version === CURRENT_APP_VERSION) {
+          return resolve({
+            success: true,
+            updated: false,
+            version: CURRENT_APP_VERSION,
+            message: `You are already running the latest verified version (v${CURRENT_APP_VERSION}).`
+          });
+        }
+
+        // Fetch the update package HTML
+        const htmlUrl = 'https://raw.githubusercontent.com/abdullahinayat24-lang/link-launcher/main/index.html?t=' + Date.now();
+        https.get(htmlUrl, (res) => {
+          if (res.statusCode !== 200) {
+            return resolve({ success: false, error: 'Failed to download update package (HTTP ' + res.statusCode + ')' });
+          }
+          let rawData = '';
+          res.on('data', chunk => rawData += chunk);
+          res.on('end', () => {
+            try {
+              if (!isValidHtmlPackage(rawData)) {
+                return resolve({ success: false, error: 'Downloaded package failed integrity checks' });
+              }
+
+              // Check SHA-256 if manifest provides it
+              if (manifest.sha256) {
+                const computedSha = crypto.createHash('sha256').update(rawData).digest('hex');
+                if (computedSha.toLowerCase() !== manifest.sha256.toLowerCase()) {
+                  return resolve({ success: false, error: 'Package checksum verification failed. Update discarded.' });
+                }
+              }
+
+              const updateDir = path.join(app.getPath('userData'), 'update');
+              if (!fs.existsSync(updateDir)) fs.mkdirSync(updateDir, { recursive: true });
+              const userHtmlPath = path.join(updateDir, 'index.html');
+              const backupPath = path.join(updateDir, 'index.html.backup');
+
+              // Backup previous working version
+              if (fs.existsSync(userHtmlPath)) {
+                try { fs.copyFileSync(userHtmlPath, backupPath); } catch(e) {}
+              }
+
+              fs.writeFileSync(userHtmlPath, rawData, 'utf8');
+              fs.writeFileSync(path.join(updateDir, 'version.json'), JSON.stringify(manifest, null, 2), 'utf8');
+
+              resolve({
+                success: true,
+                updated: true,
+                version: manifest.version,
+                message: `Successfully verified and installed v${manifest.version}! Please restart DreamsLab to apply.`
+              });
+            } catch (e) {
+              resolve({ success: false, error: e.message });
+            }
+          });
+        }).on('error', (err) => {
+          resolve({ success: false, error: 'Network error downloading update: ' + err.message });
+        });
       });
     }).on('error', (err) => {
-      resolve({ success: false, error: err.message });
+      resolve({ success: false, error: 'Network error checking manifest: ' + err.message });
     });
   });
 });
