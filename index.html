@@ -1550,7 +1550,7 @@
     let searchQuery = '';
     let selectedLinkIds = new Set();
     let currentDrawerLinkId = null;
-    let filterToLocalOnly = true;    // True: scope to profiles on this PC; False: show all cloud profiles
+    let filterToLocalOnly = false;    // True: scope to profiles on this PC; False: show all cloud profiles
 
     const DEFAULT_CATEGORIES = [
       "Book Publish",
@@ -1901,6 +1901,7 @@
     let localDetectedProfiles = [];
 
     const PROFILE_CONFIGS = {
+      'datatransferidflthurles@gmail.com': { name: 'Work Thurles', shortName: 'Work Thurles', color: '#00838f', letter: 'W' },
       'comicsexplainedinhindi@gmail.com': { name: 'Entertaindo', shortName: 'Entertaindo', color: '#1a73e8', letter: 'E' },
       'r.abdullah.artist@gmail.com': { name: 'Your Chrome', shortName: 'Your Chrome', color: '#8e24aa', letter: 'Y' },
       'abdullahinayat24@gmail.com': { name: 'Rana (abdullahinayat24)', shortName: 'Rana (abdullahinayat24)', color: '#188038', letter: 'R' },
@@ -2090,44 +2091,40 @@
         });
       });
 
-      // 2. Vault profiles (only added if filterToLocalOnly is false OR profile is local)
+      // 2. Vault profiles (always show all accounts so none are hidden)
       (vaultData.profiles || []).forEach(p => {
         const email = (p.email || '').toLowerCase().trim();
         const key = email || (p.id || p.folder || '').toLowerCase();
         const isLoc = localEmails.has(email);
         if (key && !profileMap.has(key)) {
-          if (!filterToLocalOnly || isLoc || localDetectedProfiles.length === 0) {
-            const meta = getProfileMeta(email, p.name);
-            profileMap.set(key, {
-              id: p.id || ('prof_' + key),
-              name: meta.name || p.name,
-              email: p.email || '',
-              folder: p.folder || 'Default',
-              color: meta.color,
-              letter: meta.letter,
-              isLocal: isLoc
-            });
-          }
+          const meta = getProfileMeta(email, p.name);
+          profileMap.set(key, {
+            id: p.id || ('prof_' + key),
+            name: meta.name || p.name,
+            email: p.email || '',
+            folder: p.folder || 'Default',
+            color: meta.color,
+            letter: meta.letter,
+            isLocal: isLoc
+          });
         }
       });
 
-      // 3. Profiles from links (only added if filterToLocalOnly is false OR profile is local)
+      // 3. Profiles from links (always show so every email with links is accessible)
       (vaultData.links || []).forEach(l => {
         const email = (l.profileEmail || '').toLowerCase().trim();
         const isLoc = localEmails.has(email);
         if (email && !profileMap.has(email)) {
-          if (!filterToLocalOnly || isLoc || localDetectedProfiles.length === 0) {
-            const meta = getProfileMeta(email, l.profileName);
-            profileMap.set(email, {
-              id: 'prof_' + email,
-              name: meta.name || l.profileName,
-              email: l.profileEmail,
-              folder: l.profileFolder || 'Default',
-              color: meta.color,
-              letter: meta.letter,
-              isLocal: isLoc
-            });
-          }
+          const meta = getProfileMeta(email, l.profileName);
+          profileMap.set(email, {
+            id: 'prof_' + email,
+            name: meta.name || l.profileName,
+            email: l.profileEmail,
+            folder: l.profileFolder || 'Default',
+            color: meta.color,
+            letter: meta.letter,
+            isLocal: isLoc
+          });
         }
       });
 
@@ -2752,16 +2749,40 @@
       const priority = document.getElementById('newLinkPriority').value || 'normal';
       const notes = document.getElementById('newLinkNotes').value.trim();
 
-      const prof = vaultData.profiles.find(p => p.id === profVal || p.email === profVal || p.folder === profVal) || { name: 'Default', folder: 'Default', email: '' };
+      let targetEmail = '';
+      let targetName = 'Default';
+      let targetFolder = 'Default';
+      let targetId = '';
+
+      const matchedProf = vaultData.profiles.find(p => p.id === profVal || (p.email && p.email.toLowerCase() === profVal.toLowerCase()) || p.folder === profVal);
+      if (matchedProf) {
+        targetId = matchedProf.id || ('prof_' + Math.random().toString(36).substr(2, 6));
+        targetEmail = matchedProf.email || '';
+        targetName = matchedProf.name || 'Default';
+        targetFolder = matchedProf.folder || 'Default';
+      } else if (profVal && profVal.includes('@')) {
+        targetEmail = profVal.toLowerCase().trim();
+        const meta = getProfileMeta(targetEmail);
+        targetName = meta.name;
+        targetId = 'prof_' + targetEmail;
+        targetFolder = 'Default';
+        vaultData.profiles.push({
+          id: targetId,
+          name: targetName,
+          email: targetEmail,
+          folder: targetFolder,
+          notes: ''
+        });
+      }
 
       vaultData.links.push({
         id: 'link_' + Math.random().toString(36).substr(2, 9),
         url,
         title,
-        profileId: prof.id || '',
-        profileEmail: prof.email || '',
-        profileName: prof.name || '',
-        profileFolder: prof.folder || 'Default',
+        profileId: targetId,
+        profileEmail: targetEmail,
+        profileName: targetName,
+        profileFolder: targetFolder,
         category,
         priority,
         notes,
