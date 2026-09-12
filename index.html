@@ -1701,6 +1701,12 @@
     let currentDrawerLinkId = null;
     let filterToLocalOnly = isDesktopApp; // Desktop defaults to local-only
 
+    function handleFaviconError(img) {
+      if (!img) return;
+      img.onerror = null;
+      img.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2372777a' stroke-width='2'><circle cx='12' cy='12' r='10'/><line x1='2' y1='12' x2='22' y2='12'/><path d='M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z'/></svg>";
+    }
+
     const DEFAULT_CATEGORIES = [
       "Book Publish",
       "App Ideas",
@@ -1746,8 +1752,25 @@
     }
 
     /* ==========================================================================
-       CRYPTO ENGINE (AES-256-GCM + PBKDF2)
+       CRYPTO ENGINE (UNIVERSAL AES-256-GCM + PBKDF2)
        ========================================================================== */
+    function toUint8Array(val) {
+      if (!val) return new Uint8Array(0);
+      if (val instanceof Uint8Array) return val;
+      if (Array.isArray(val)) return new Uint8Array(val);
+      if (typeof val === 'string') {
+        try {
+          const binStr = atob(val);
+          const arr = new Uint8Array(binStr.length);
+          for (let i = 0; i < binStr.length; i++) arr[i] = binStr.charCodeAt(i);
+          return arr;
+        } catch(e) {
+          return new TextEncoder().encode(val);
+        }
+      }
+      return new Uint8Array(0);
+    }
+
     async function deriveKey(password, salt) {
       const enc = new TextEncoder();
       const keyMaterial = await crypto.subtle.importKey(
@@ -1790,17 +1813,50 @@
     }
 
     async function decryptData(encryptedObj, password) {
-      const salt = Uint8Array.from(atob(encryptedObj.salt), c => c.charCodeAt(0));
-      const iv = Uint8Array.from(atob(encryptedObj.iv), c => c.charCodeAt(0));
-      const data = Uint8Array.from(atob(encryptedObj.data), c => c.charCodeAt(0));
-      const key = await deriveKey(password, salt);
+      if (!encryptedObj) throw new Error('Empty encrypted object');
+
+      // Case 1: raw string ciphertext (legacy format 1)
+      if (typeof encryptedObj === 'string') {
+        try {
+          const buf = toUint8Array(encryptedObj);
+          const iv = buf.slice(0, 12);
+          const data = buf.slice(12);
+          const salt = new TextEncoder().encode('dreamslab-cyber-salt-2026');
+          const key = await deriveKey(password, salt);
+          const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, data);
+          return JSON.parse(new TextDecoder().decode(decrypted));
+        } catch(e) {}
+      }
+
+      // Case 2: object format { salt, iv, data }
+      const ivArr = toUint8Array(encryptedObj.iv);
+      const dataArr = toUint8Array(encryptedObj.data);
+
+      // Try with object's own salt if present
+      let saltArr = toUint8Array(encryptedObj.salt);
+      if (saltArr && saltArr.length > 0) {
+        try {
+          const key = await deriveKey(password, saltArr);
+          const decrypted = await crypto.subtle.decrypt(
+            { name: 'AES-GCM', iv: ivArr },
+            key,
+            dataArr
+          );
+          return JSON.parse(new TextDecoder().decode(decrypted));
+        } catch(e) {
+          // Fall through to try fallback salt
+        }
+      }
+
+      // Fallback: legacy hardcoded salt
+      const fallbackSalt = new TextEncoder().encode('dreamslab-cyber-salt-2026');
+      const key = await deriveKey(password, fallbackSalt);
       const decrypted = await crypto.subtle.decrypt(
-        { name: 'AES-GCM', iv: iv },
+        { name: 'AES-GCM', iv: ivArr },
         key,
-        data
+        dataArr
       );
-      const dec = new TextDecoder();
-      return JSON.parse(dec.decode(decrypted));
+      return JSON.parse(new TextDecoder().decode(decrypted));
     }
 
     /* ==========================================================================
@@ -1824,8 +1880,8 @@
         const encrypted = await encryptData(vaultData, currentPassword);
         const key = getStorageKey(currentUserEmail);
         localStorage.setItem(key, JSON.stringify(encrypted));
-        if (window.electronAPI && window.electronAPI.saveLocalVault) {
-          window.electronAPI.saveLocalVault(JSON.stringify(encrypted));
+        if (window.electronAPI && window.electronAPI.saveToDocuments) {
+          window.electronAPI.saveToDocuments(JSON.stringify(encrypted));
         }
       } catch (err) {
         console.error('Error saving vault:', err);
@@ -1846,7 +1902,8 @@
       const tabCreate = document.getElementById('tabCreateAccount');
       const tabSignIn = document.getElementById('tabSignIn');
       const errorEl = document.getElementById('unlockError');
-      if (errorEl) errorEl.textContent = '';
+      const footerText = document.getElementById('lockFooterText');
+      if (errorEl) errorEl.innerHTML = '';
 
       if (createMode) {
         if (title) title.textContent = 'Create Vault Account';
@@ -1857,15 +1914,27 @@
         if (passInput) passInput.placeholder = 'Choose Master Password';
         if (tabCreate) { tabCreate.style.background = 'var(--google-blue)'; tabCreate.style.color = '#fff'; }
         if (tabSignIn) { tabSignIn.style.background = 'transparent'; tabSignIn.style.color = 'var(--text-secondary)'; }
+        if (footerText) {
+          footerText.innerHTML = '<div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">' +
+            '<span>Already have an account? <a href="#" onclick="setLockMode(false); return false;" style="color: var(--google-blue); text-decoration: underline; cursor: pointer; font-weight: 500;">Sign In</a></span>' +
+            '<a href="#" onclick="resetLocalVault(event)" style="color: var(--google-red); text-decoration: underline; cursor: pointer; font-weight: 500;">🧹 Reset this device</a>' +
+            '</div>';
+        }
       } else {
-        if (title) title.textContent = 'Unlock Vault';
-        if (subtitle) subtitle.textContent = 'Enter your master password to decrypt this device';
+        if (title) title.textContent = 'Sign In to Vault';
+        if (subtitle) subtitle.textContent = 'Enter your master password to unlock';
         if (confirmGroup) confirmGroup.style.display = 'none';
         if (confirmInput) confirmInput.required = false;
         if (submitBtn) submitBtn.textContent = 'Unlock Vault';
         if (passInput) passInput.placeholder = 'Master Password';
         if (tabCreate) { tabCreate.style.background = 'transparent'; tabCreate.style.color = 'var(--text-secondary)'; }
         if (tabSignIn) { tabSignIn.style.background = 'var(--google-blue)'; tabSignIn.style.color = '#fff'; }
+        if (footerText) {
+          footerText.innerHTML = '<div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">' +
+            '<span>Don\'t have an account? <a href="#" onclick="setLockMode(true); return false;" style="color: var(--google-blue); text-decoration: underline; cursor: pointer; font-weight: 500;">Create Account</a></span>' +
+            '<a href="#" onclick="resetLocalVault(event)" style="color: var(--google-red); text-decoration: underline; cursor: pointer; font-weight: 500;">🧹 Reset this device</a>' +
+            '</div>';
+        }
       }
     }
 
@@ -1881,7 +1950,7 @@
       const hasLegacyVault = !!localStorage.getItem('dreamslab_cyber_vault_v1');
 
       if (hasAccountVault || hasLegacyVault) {
-        setLockMode(false); // Sign In mode
+        setLockMode(false); // Sign In mode for returning user
       } else {
         setLockMode(true); // First-time Create Account mode
       }
@@ -1995,22 +2064,29 @@
         isLegacy = true;
       }
 
-      if (!rawToDecrypt) {
-        if (window.electronAPI && window.electronAPI.readLocalVault) {
-          try {
-            const fileData = await window.electronAPI.readLocalVault();
-            if (fileData) rawToDecrypt = fileData;
-          } catch(e) {}
-        }
+      if (!rawToDecrypt && window.electronAPI && window.electronAPI.restoreFromDocuments) {
+        try {
+          const res = await window.electronAPI.restoreFromDocuments();
+          if (res && res.success && res.content) {
+            rawToDecrypt = res.content;
+            isLegacy = true;
+          }
+        } catch(e) {}
       }
 
       if (!rawToDecrypt) {
-        errorEl.textContent = 'No local vault found for this email on this device. Switch to "Create Account".';
+        errorEl.innerHTML = 'No vault found for this email on this device.<br><a href="#" onclick="setLockMode(true); return false;" style="color: var(--google-blue); font-weight: 600; text-decoration: underline;">Click here to Create Account</a>';
         return;
       }
 
       try {
-        const encryptedData = JSON.parse(rawToDecrypt);
+        let encryptedData;
+        try {
+          encryptedData = typeof rawToDecrypt === 'object' ? rawToDecrypt : JSON.parse(rawToDecrypt);
+        } catch(e) {
+          encryptedData = rawToDecrypt;
+        }
+
         const decrypted = await decryptData(encryptedData, pass);
         if (!decrypted || typeof decrypted !== 'object') {
           throw new Error('Invalid vault contents');
@@ -2020,14 +2096,14 @@
         vaultData = decrypted;
         normalizeVaultLinks();
 
-        // Migrate from legacy vault to email-namespaced storage
+        // Migrate from legacy vault to email-namespaced storage & backup
         if (isLegacy) {
           await saveVault();
-          showToast('✅ Legacy vault migrated to your account!');
+          showToast('✅ Existing vault unlocked & linked to your account!');
         }
 
         document.getElementById('lockScreen').style.display = 'none';
-        errorEl.textContent = '';
+        errorEl.innerHTML = '';
 
         if (isDesktopApp) {
           await refreshLocalChromeProfiles();
@@ -2041,7 +2117,7 @@
           syncPullCloudVault();
         }
       } catch (err) {
-        errorEl.textContent = '❌ Incorrect password or corrupted vault data.';
+        errorEl.innerHTML = '❌ Incorrect password for this vault.<br><span style="font-size:11px; color:var(--text-muted);">Want to create a new vault instead? <a href="#" onclick="setLockMode(true); return false;" style="color: var(--google-blue); font-weight: 600; text-decoration: underline;">Create Account</a></span>';
       }
     }
 
@@ -2363,11 +2439,16 @@
 
     function updateNavigationCounts() {
       const links = getScopedLinks();
-      document.getElementById('countAll').textContent = links.length;
-      document.getElementById('countStarred').textContent = links.filter(l => l.starred).length;
-      document.getElementById('countHigh').textContent = links.filter(l => l.priority === 'high').length;
-      document.getElementById('countMed').textContent = links.filter(l => l.priority === 'medium').length;
-      document.getElementById('countLow').textContent = links.filter(l => l.priority === 'low').length;
+      const elAll = document.getElementById('countAll');
+      if (elAll) elAll.textContent = links.length;
+      const elStarred = document.getElementById('countStarred');
+      if (elStarred) elStarred.textContent = links.filter(l => l.starred).length;
+      const elHigh = document.getElementById('countHigh');
+      if (elHigh) elHigh.textContent = links.filter(l => l.priority === 'high').length;
+      const elMed = document.getElementById('countMedium');
+      if (elMed) elMed.textContent = links.filter(l => l.priority === 'medium').length;
+      const elLow = document.getElementById('countLow');
+      if (elLow) elLow.textContent = links.filter(l => l.priority === 'low').length;
     }
 
     function renderSidebarProfiles() {
@@ -2611,7 +2692,7 @@
 
             <!-- TITLE & SNIPPET -->
             <div class="link-content-col">
-              <img src="${faviconUrl}" class="link-favicon-mini" ${svgFallback}>
+              <img src="${faviconUrl}" class="link-favicon-mini" onerror="handleFaviconError(this)">
               <span class="link-title-text">${escapeHtml(l.title)}</span>
               <span class="link-snippet-text">— ${escapeHtml(l.notes || l.url)}</span>
             </div>
@@ -2736,7 +2817,8 @@
       document.getElementById('drawerCategoryInput').value = item.category || '';
       document.getElementById('drawerNotesInput').value = item.notes || '';
       document.getElementById('drawerPrioritySelect').value = item.priority || 'normal';
-      document.getElementById('drawerIsTaskCheckbox').checked = !!item.isTask;
+      const elTask = document.getElementById('drawerTaskCheck');
+      if (elTask) elTask.checked = !!item.isTask;
 
       populateProfileSelect('drawerProfileSelect', item.profileEmail || item.profileId);
       populateCategoryDatalist();
@@ -2759,7 +2841,8 @@
       item.category = document.getElementById('drawerCategoryInput').value.trim() || 'General';
       item.notes = document.getElementById('drawerNotesInput').value.trim();
       item.priority = document.getElementById('drawerPrioritySelect').value;
-      item.isTask = document.getElementById('drawerIsTaskCheckbox').checked;
+      const elTask = document.getElementById('drawerTaskCheck');
+      if (elTask) item.isTask = elTask.checked;
 
       const profSelect = document.getElementById('drawerProfileSelect');
       const selectedEmail = profSelect.value;
@@ -2844,9 +2927,16 @@
     function selectNavView(view) {
       activeNavView = view;
       document.querySelectorAll('.sidebar-left .nav-item').forEach(el => el.classList.remove('active'));
-      const idMap = { ALL: 'navAll', STARRED: 'navStarred', HIGH: 'navHigh', MEDIUM: 'navMed', LOW: 'navLow' };
-      if (idMap[view]) {
-        const el = document.getElementById(idMap[view]);
+      const idMap = {
+        ALL: 'navAll',
+        STARRED: 'navStarred',
+        HIGH: 'navHigh',
+        MEDIUM: document.getElementById('navMedium') ? 'navMedium' : 'navMed',
+        LOW: 'navLow'
+      };
+      const targetId = idMap[view];
+      if (targetId) {
+        const el = document.getElementById(targetId);
         if (el) el.classList.add('active');
       }
       renderLinksStream();
@@ -2914,7 +3004,7 @@
     }
 
     function populateCategoryDatalist() {
-      const list = document.getElementById('categoriesDatalist');
+      const list = document.getElementById('drawerCategoryDatalist');
       if (!list) return;
       const cats = new Set([...DEFAULT_CATEGORIES, ...(vaultData.categories || [])]);
       let html = '';
@@ -3023,35 +3113,39 @@
     }
 
     function openAddLinkModal() {
-      document.getElementById('newLinkTitle').value = '';
-      document.getElementById('newLinkUrl').value = '';
-      document.getElementById('newLinkCategory').value = activeCategory === 'ALL' ? 'General' : activeCategory;
-      document.getElementById('newLinkNotes').value = '';
-      document.getElementById('newLinkPriority').value = 'normal';
-      document.getElementById('newLinkIsTask').checked = false;
+      const elTitle = document.getElementById('newLinkTitle');
+      if (elTitle) elTitle.value = '';
+      const elUrl = document.getElementById('newLinkUrl');
+      if (elUrl) elUrl.value = '';
+      const elCat = document.getElementById('newLinkCategory');
+      if (elCat) elCat.value = activeCategory === 'ALL' ? 'General' : activeCategory;
+      const elNotes = document.getElementById('newLinkNotes');
+      if (elNotes) elNotes.value = '';
+      const elPrio = document.getElementById('newLinkPriority');
+      if (elPrio) elPrio.value = 'normal';
 
-      populateProfileSelect('newLinkProfile', activeProfileEmail);
+      populateProfileSelect('newLinkProfileSelect', activeProfileEmail);
       populateCategoryDatalist();
       openModal('addLinkModal');
-      setTimeout(() => document.getElementById('newLinkUrl').focus(), 50);
+      if (elUrl) setTimeout(() => elUrl.focus(), 50);
     }
 
-    async function saveNewLinkItem() {
+    async function saveNewLinkItem(e) {
+      if (e && e.preventDefault) e.preventDefault();
       const titleInput = document.getElementById('newLinkTitle');
       const urlInput = document.getElementById('newLinkUrl');
       const catInput = document.getElementById('newLinkCategory');
       const notesInput = document.getElementById('newLinkNotes');
       const prioInput = document.getElementById('newLinkPriority');
-      const isTaskInput = document.getElementById('newLinkIsTask');
-      const profSelect = document.getElementById('newLinkProfile');
+      const profSelect = document.getElementById('newLinkProfileSelect');
 
-      let url = urlInput.value.trim();
+      let url = urlInput ? urlInput.value.trim() : '';
       if (!url) { alert('URL is required'); return; }
       if (!url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('chrome://')) {
         url = 'https://' + url;
       }
 
-      let title = titleInput.value.trim();
+      let title = titleInput ? titleInput.value.trim() : '';
       if (!title) {
         try {
           const parsed = new URL(url);
@@ -3062,8 +3156,9 @@
         }
       }
 
-      const cat = catInput.value.trim() || 'General';
-      const selectedEmail = profSelect.value;
+      const cat = (catInput ? catInput.value.trim() : '') || 'General';
+      const prio = (prioInput ? prioInput.value : null) || 'normal';
+      const selectedEmail = profSelect ? profSelect.value : '';
       const matchedProf = (vaultData.profiles || []).find(p => (p.email || '').toLowerCase() === selectedEmail.toLowerCase());
 
       const newLink = {
@@ -3071,9 +3166,9 @@
         title: title,
         url: url,
         category: cat,
-        notes: notesInput.value.trim(),
-        priority: prioInput.value || 'normal',
-        isTask: isTaskInput.checked,
+        notes: notesInput ? notesInput.value.trim() : '',
+        priority: prio,
+        isTask: (prio === 'high'),
         taskDone: false,
         starred: false,
         profileEmail: selectedEmail || '',
@@ -3096,17 +3191,25 @@
     }
 
     function openAddProfileModal() {
-      document.getElementById('newProfileName').value = '';
-      document.getElementById('newProfileEmail').value = '';
-      document.getElementById('newProfileNotes').value = '';
+      const elName = document.getElementById('newProfName');
+      const elEmail = document.getElementById('newProfEmail');
+      const elFolder = document.getElementById('newProfFolder');
+      if (elName) elName.value = '';
+      if (elEmail) elEmail.value = '';
+      if (elFolder) elFolder.value = '';
       openModal('addProfileModal');
-      setTimeout(() => document.getElementById('newProfileName').focus(), 50);
+      if (elName) setTimeout(() => elName.focus(), 50);
     }
 
-    async function saveNewProfileItem() {
-      const name = document.getElementById('newProfileName').value.trim();
-      const email = document.getElementById('newProfileEmail').value.trim().toLowerCase();
-      const notes = document.getElementById('newProfileNotes').value.trim();
+    async function saveNewProfileItem(e) {
+      if (e && e.preventDefault) e.preventDefault();
+      const elName = document.getElementById('newProfName');
+      const elEmail = document.getElementById('newProfEmail');
+      const elFolder = document.getElementById('newProfFolder');
+
+      const name = elName ? elName.value.trim() : '';
+      const email = elEmail ? elEmail.value.trim().toLowerCase() : '';
+      const folder = elFolder ? elFolder.value.trim() : '';
 
       if (!name && !email) {
         alert('Please provide at least a Profile Name or Google Email');
@@ -3125,7 +3228,7 @@
         email: email,
         color: meta.color,
         letter: meta.letter,
-        notes: notes,
+        folder: folder,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
@@ -3151,12 +3254,12 @@
     }
 
     function toggleCloudGuide() {
-      const guide = document.getElementById('cloudHelpGuide');
-      const toggleText = document.getElementById('cloudGuideToggleText');
+      const guide = document.getElementById('cloudGuideContent');
+      const toggleBtn = document.getElementById('btnToggleCloudGuide');
       if (!guide) return;
-      const isHidden = guide.style.display === 'none' || guide.style.display === '';
-      guide.style.display = isHidden ? 'block' : 'none';
-      if (toggleText) toggleText.textContent = isHidden ? '▲ Hide setup guide' : '▼ View 30-second setup guide';
+      const isHidden = guide.style.display === 'none';
+      guide.style.display = isHidden ? 'flex' : 'none';
+      if (toggleBtn) toggleBtn.textContent = isHidden ? 'Hide Guide' : 'Show Guide';
     }
 
     function openCloudModal() {
