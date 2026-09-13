@@ -1174,7 +1174,7 @@
       <div id="lockFooterText" style="font-size: 11px; color: var(--text-muted); border-top: 1px solid var(--border-subtle); width: 100%; padding-top: 12px; margin-top: 6px;">
         <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
           <span id="lockFooterToggle">Have an account? <a href="#" onclick="setLockMode(false); return false;" style="color: var(--google-blue); text-decoration: underline; cursor: pointer; font-weight: 500;">Sign In</a></span>
-          <a href="#" onclick="resetLocalVault(event)" style="color: var(--google-red); text-decoration: underline; cursor: pointer; font-weight: 500;">🧹 Reset this device</a>
+          <a href="#" onclick="openResetDeviceModal(event); return false;" style="color: var(--google-red); text-decoration: underline; cursor: pointer; font-weight: 500;">🧹 Reset this device</a>
         </div>
         <div style="margin-top: 8px; text-align: center;">
           <a href="#" onclick="openServerConfigModal(); return false;" style="color: var(--text-muted); text-decoration: underline; font-size: 11px; cursor: pointer;">⚙️ Cloud Server: <span id="lockServerUrlText">https://link-launcher.onrender.com</span> [Configure]</a>
@@ -1553,6 +1553,25 @@
       <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 8px;">
         <button class="btn-secondary" onclick="closeModal('serverConfigModal')">Cancel</button>
         <button class="btn-primary" onclick="saveServerConfigUrl()">Save & Test Connection</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESET DEVICE MODAL -->
+  <div id="resetDeviceModal" class="modal-overlay">
+    <div class="modal-card" style="max-width: 420px; text-align: center;">
+      <div class="modal-header">
+        <div class="modal-title" style="display: flex; align-items: center; gap: 6px; color: var(--google-red);">🧹 Reset This Device</div>
+        <button class="modal-close-btn" onclick="closeModal('resetDeviceModal')">&times;</button>
+      </div>
+      <div class="modal-body" style="text-align: left; font-size: 13px; line-height: 1.5; color: var(--text-secondary);">
+        <p>This will erase the cached encrypted vault and local credentials stored on this computer.</p>
+        <p style="margin-top: 10px; color: var(--google-green); font-weight: 500;">✓ Your cloud vault on the server will NOT be deleted.</p>
+        <p style="margin-top: 8px; font-size: 12px; color: var(--text-muted);">You can create a new account or sign into an existing account immediately after reset.</p>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button type="button" class="btn-secondary" onclick="closeModal('resetDeviceModal')">Cancel</button>
+        <button type="button" class="btn-primary" style="background: var(--google-red); border-color: var(--google-red);" onclick="confirmResetLocalVault()">Yes, Reset Device</button>
       </div>
     </div>
   </div>
@@ -2101,14 +2120,16 @@
       }
     }
 
-    async function resetLocalVault(e) {
-      if (e) e.preventDefault();
-      if (!confirm('⚠️ Are you sure you want to reset this device?\n\nThis will erase the cached encrypted vault on this computer. Your cloud vault on the server will NOT be deleted.\n\nProceed?')) {
-        return;
-      }
+    function openResetDeviceModal(e) {
+      if (e && e.preventDefault) e.preventDefault();
+      openModal('resetDeviceModal');
+    }
+
+    async function confirmResetLocalVault() {
+      closeModal('resetDeviceModal');
 
       const key = getStorageKey(currentUserEmail);
-      localStorage.removeItem(key);
+      if (key) localStorage.removeItem(key);
       localStorage.removeItem('dreamslab_cyber_vault_v1');
       localStorage.removeItem('dreamslab_last_email');
       sessionStorage.clear();
@@ -2130,7 +2151,14 @@
       if (emailInput) emailInput.value = '';
       if (passInput) passInput.value = '';
       if (confirmInput) confirmInput.value = '';
-      showToast('Device cache reset complete. Ready to sign in or create account.');
+
+      setTimeout(() => {
+        if (emailInput) {
+          emailInput.focus();
+        }
+      }, 50);
+
+      showToast('🧹 Device cache reset complete. Ready to sign in or create account.');
     }
 
     async function handleUnlock(e) {
@@ -2361,33 +2389,32 @@
     }
 
     function handleLogout() {
-      if (confirm('Are you sure you want to log out?\n\nYour data remains safely stored in your cloud account.')) {
-        currentPassword = null;
-        currentUserEmail = '';
-        cloudAuthToken = null;
-        vaultData = { links: [], profiles: [], categories: [...DEFAULT_CATEGORIES] };
-        activeProfileEmail = null;
-        activeCategory = 'ALL';
-        sessionStorage.clear();
-        setLockMode(false);
+      currentPassword = null;
+      currentUserEmail = '';
+      cloudAuthToken = null;
+      vaultData = { links: [], profiles: [], categories: [...DEFAULT_CATEGORIES] };
+      activeProfileEmail = null;
+      activeCategory = 'ALL';
+      sessionStorage.clear();
+      setLockMode(false);
 
-        const emailInput = document.getElementById('userEmailInput');
-        if (emailInput) emailInput.value = '';
-        const passInput = document.getElementById('masterPasswordInput');
-        if (passInput) passInput.value = '';
-        const confirmInput = document.getElementById('confirmPasswordInput');
-        if (confirmInput) confirmInput.value = '';
+      const emailInput = document.getElementById('userEmailInput');
+      if (emailInput) emailInput.value = '';
+      const passInput = document.getElementById('masterPasswordInput');
+      if (passInput) passInput.value = '';
+      const confirmInput = document.getElementById('confirmPasswordInput');
+      if (confirmInput) confirmInput.value = '';
 
-        // Clear active DOM stream
-        const linksContainer = document.getElementById('linksListContainer');
-        if (linksContainer) linksContainer.innerHTML = '';
-        const profileContainer = document.getElementById('profileNavList');
-        if (profileContainer) profileContainer.innerHTML = '';
+      // Clear active DOM stream
+      const linksContainer = document.getElementById('linksListContainer');
+      if (linksContainer) linksContainer.innerHTML = '';
+      const profileContainer = document.getElementById('profileNavList');
+      if (profileContainer) profileContainer.innerHTML = '';
 
-        document.getElementById('lockScreen').style.display = 'flex';
-        checkLockScreenState();
-        showToast('🔒 Logged out successfully');
-      }
+      document.getElementById('lockScreen').style.display = 'flex';
+      checkLockScreenState();
+      setTimeout(() => { if (emailInput) emailInput.focus(); }, 50);
+      showToast('🔒 Logged out successfully');
     }
 
     /* ==========================================================================
@@ -3345,7 +3372,6 @@
     async function deleteLinkItem(id) {
       const item = (vaultData.links || []).find(l => l.id === id);
       if (!item) return;
-      if (!confirm('Are you sure you want to delete "' + (item.title || 'this link') + '"?')) return;
 
       // Deletion tombstone for reliable two-way cloud sync
       item.deleted = true;
@@ -3396,7 +3422,7 @@
       const profSelect = document.getElementById('newLinkProfileSelect');
 
       let url = urlInput ? urlInput.value.trim() : '';
-      if (!url) { alert('URL is required'); return; }
+      if (!url) { showToast('⚠️ URL is required'); return; }
       if (!url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('chrome://')) {
         url = 'https://' + url;
       }
@@ -3481,12 +3507,12 @@
       const folder = elFolder ? elFolder.value.trim() : '';
 
       if (!name && !email) {
-        alert('Please provide at least a Profile Name or Google Email');
+        showToast('⚠️ Please provide at least a Profile Name or Google Email');
         return;
       }
 
       if (email && (vaultData.profiles || []).some(p => (p.email || '').toLowerCase() === email)) {
-        alert('A profile with this email already exists in your vault.');
+        showToast('⚠️ A profile with this email already exists in your vault.');
         return;
       }
 
