@@ -1177,7 +1177,7 @@
           <a href="#" onclick="resetLocalVault(event)" style="color: var(--google-red); text-decoration: underline; cursor: pointer; font-weight: 500;">🧹 Reset this device</a>
         </div>
         <div style="margin-top: 8px; text-align: center;">
-          <a href="#" onclick="openServerConfigModal(); return false;" style="color: var(--text-muted); text-decoration: underline; font-size: 11px; cursor: pointer;">⚙️ Cloud Server: <span id="lockServerUrlText">http://localhost:3000</span> [Configure]</a>
+          <a href="#" onclick="openServerConfigModal(); return false;" style="color: var(--text-muted); text-decoration: underline; font-size: 11px; cursor: pointer;">⚙️ Cloud Server: <span id="lockServerUrlText">https://link-launcher.onrender.com</span> [Configure]</a>
         </div>
       </div>
     </div>
@@ -1542,11 +1542,11 @@
       </div>
       <div class="modal-body">
         <p style="font-size: 12px; color: var(--text-secondary); line-height: 1.45; margin-bottom: 12px;">
-          Specify your Link Launcher Cloud API URL (default: <code>http://localhost:3000</code> or your deployed Render/Railway/Fly.io server):
+          Specify your Link Launcher Cloud API URL (default: <code>https://link-launcher.onrender.com</code> or your custom server):
         </p>
         <div class="form-group">
           <label class="form-label" style="font-size: 12px;">Cloud Server URL</label>
-          <input type="text" id="configServerUrlInput" class="form-control" placeholder="http://localhost:3000" style="font-size: 13px;">
+          <input type="text" id="configServerUrlInput" class="form-control" placeholder="https://link-launcher.onrender.com" style="font-size: 13px;">
         </div>
         <div id="serverConfigStatus" style="font-size: 12px; text-align: center; min-height: 18px; font-weight: 500;"></div>
       </div>
@@ -1727,7 +1727,7 @@
     let chromeDetectionError = '';
 
     // Cloud Backend Configuration
-    let cloudApiUrl = localStorage.getItem('dreamslab_cloud_api_url') || 'http://localhost:3000';
+    let cloudApiUrl = localStorage.getItem('dreamslab_cloud_api_url') || 'https://link-launcher.onrender.com';
     let cloudAuthToken = sessionStorage.getItem('dreamslab_auth_token') || null;
     let syncStatusState = 'synced'; // 'synced', 'syncing', 'offline'
 
@@ -2056,7 +2056,7 @@
       if (!input) return;
       let url = input.value.trim();
       if (url.endsWith('/')) url = url.slice(0, -1);
-      if (!url) url = 'http://localhost:3000';
+      if (!url) url = 'https://link-launcher.onrender.com';
 
       statusEl.innerHTML = '<span style="color: var(--google-blue);">⏳ Testing connection...</span>';
       try {
@@ -3543,7 +3543,7 @@
       if (!input) return;
       let url = input.value.trim();
       if (url.endsWith('/')) url = url.slice(0, -1);
-      if (!url) url = 'http://localhost:3000';
+      if (!url) url = 'https://link-launcher.onrender.com';
       cloudApiUrl = url;
       localStorage.setItem('dreamslab_cloud_api_url', url);
       const label = document.getElementById('lockServerUrlText');
