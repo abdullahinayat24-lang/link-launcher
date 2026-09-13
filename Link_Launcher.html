@@ -1176,8 +1176,9 @@
           <span id="lockFooterToggle">Have an account? <a href="#" onclick="setLockMode(false); return false;" style="color: var(--google-blue); text-decoration: underline; cursor: pointer; font-weight: 500;">Sign In</a></span>
           <a href="#" onclick="openResetDeviceModal(event); return false;" style="color: var(--google-red); text-decoration: underline; cursor: pointer; font-weight: 500;">🧹 Reset this device</a>
         </div>
-        <div style="margin-top: 8px; text-align: center;">
-          <a href="#" onclick="openServerConfigModal(); return false;" style="color: var(--text-muted); text-decoration: underline; font-size: 11px; cursor: pointer;">⚙️ Cloud Server: <span id="lockServerUrlText">https://link-launcher.onrender.com</span> [Configure]</a>
+        <div style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center; width: 100%;">
+          <a href="#" onclick="openUpdateModal(); return false;" style="color: var(--google-blue); text-decoration: underline; font-size: 11px; cursor: pointer; font-weight: 500;">🔄 Check for Updates</a>
+          <a href="#" onclick="openServerConfigModal(); return false;" style="color: var(--text-muted); text-decoration: underline; font-size: 11px; cursor: pointer;">⚙️ Cloud Server: <span id="lockServerUrlText">https://link-launcher.onrender.com</span></a>
         </div>
       </div>
     </div>
@@ -1209,7 +1210,7 @@
 
     <!-- CONTROLS -->
     <div class="header-actions">
-      <button class="btn-header btn-sync" onclick="openCloudModal()" title="AES-256 Gist Cloud Sync">
+      <button class="btn-header btn-sync" onclick="openCloudModal()" title="Cloud Vault Sync">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
         Cloud Sync
       </button>
@@ -1217,9 +1218,10 @@
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Backup
       </button>
-      <button class="btn-header" onclick="openUpdateModal()" title="Check for hot updates">
+      <button id="headerUpdateBtn" class="btn-header btn-update" onclick="openUpdateModal()" title="Check for Updates (v1.0.6)" style="position: relative;">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
         Update
+        <span id="updateDot" style="display:none;width:7px;height:7px;background:#f59e0b;border-radius:50%;position:absolute;top:4px;right:4px;"></span>
       </button>
       <button class="btn-header btn-lock" onclick="lockVault()" title="Lock Vault">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
@@ -1703,25 +1705,25 @@
 
   <!-- UPDATE MODAL -->
   <div id="updateModal" class="modal-overlay">
-    <div class="modal-card">
+    <div class="modal-card" style="max-width: 440px;">
       <div class="modal-header">
-        <div class="modal-title">Software Updates</div>
+        <div class="modal-title" style="display: flex; align-items: center; gap: 6px;">🔄 Software Updates</div>
         <button class="modal-close-btn" onclick="closeModal('updateModal')">&times;</button>
       </div>
       <div class="modal-body">
-        <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
           <div style="font-size: 28px;">⚡</div>
           <div>
-            <div style="font-family: var(--font-google); font-size: 14px; font-weight: 600;">DreamsLab Cyber Launcher v1.0.3</div>
-            <div style="font-size: 12px; color: var(--text-muted);">Hot-Update Engine & Winget Package</div>
+            <div style="font-family: var(--font-google); font-size: 14px; font-weight: 600;">DreamsLab Cyber Launcher <span class="brand-version-badge" style="background: #e8f0fe; color: #1a73e8; padding: 2px 6px; border-radius: 4px; font-size: 11px;">v1.0.6</span></div>
+            <div style="font-size: 12px; color: var(--text-muted);">Hot-Update Engine & Cloud Vault Sync</div>
           </div>
         </div>
-        <div id="updateStatusText" style="font-size: 12px; color: var(--text-secondary); padding: 12px; background: #f8fafd; border-radius: 8px; border: 1px solid var(--border-subtle);">
-          Checking for updates...
+        <div id="updateStatusText" style="font-size: 12px; color: var(--text-secondary); padding: 12px; background: #f8fafd; border-radius: 8px; border: 1px solid var(--border-subtle); min-height: 48px; line-height: 1.5; display: flex; align-items: center;">
+          Click the button below to check GitHub for the latest updates.
         </div>
-        <button class="btn-primary" style="justify-content: center;" onclick="checkLiveUpdates()">Check & Apply Latest Update</button>
+        <button id="btnTriggerUpdate" class="btn-primary" style="justify-content: center; width: 100%; margin-top: 12px; height: 38px;" onclick="checkLiveUpdates()">🔄 Check & Apply Latest Update</button>
       </div>
-      <div class="modal-footer">
+      <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 8px;">
         <button class="btn-secondary" onclick="closeModal('updateModal')">Close</button>
       </div>
     </div>
@@ -4041,6 +4043,10 @@
     }
 
     /* SOFTWARE UPDATES */
+    function handleCheckUpdate() {
+      openUpdateModal();
+    }
+
     function openUpdateModal() {
       openModal('updateModal');
       checkLiveUpdates();
@@ -4048,20 +4054,53 @@
 
     async function checkLiveUpdates() {
       const statusEl = document.getElementById('updateStatusText');
-      statusEl.textContent = 'Connecting to DreamsLab GitHub release server...';
+      const triggerBtn = document.getElementById('btnTriggerUpdate');
+      if (triggerBtn) {
+        triggerBtn.disabled = true;
+        triggerBtn.textContent = '⏳ Checking for updates...';
+      }
+      if (statusEl) {
+        statusEl.innerHTML = '<span style="color: var(--google-blue);">📡 Connecting to DreamsLab GitHub release server...</span>';
+      }
+
       if (window.electronAPI && window.electronAPI.checkAndApplyUpdate) {
         try {
           const res = await window.electronAPI.checkAndApplyUpdate();
           if (res && res.updated) {
-            statusEl.textContent = '✅ Latest update applied! Restart the app to view.';
+            if (statusEl) {
+              statusEl.innerHTML = '<span style="color: #188038; font-weight: 600;">✅ Update installed successfully! Reloading in 2 seconds...</span>';
+            }
+            showToast('✅ Latest update installed! Reloading...');
+            setTimeout(() => {
+              location.reload();
+            }, 2000);
+          } else if (res && res.error) {
+            if (statusEl) {
+              statusEl.innerHTML = '<span style="color: #d93025;">⚠️ Update check error: ' + escapeHtml(res.error) + '</span>';
+            }
+            showToast('Update check failed');
           } else {
-            statusEl.textContent = '✅ You are running the latest version of DreamsLab Launcher (v1.0.3).';
+            const ver = (res && res.version) ? res.version : '1.0.6';
+            if (statusEl) {
+              statusEl.innerHTML = '<span style="color: #188038; font-weight: 500;">✅ You are running the latest version of DreamsLab Launcher (v' + escapeHtml(ver) + ').</span>';
+            }
+            showToast('✅ App is up to date (v' + ver + ')');
           }
         } catch (e) {
-          statusEl.textContent = 'Version up to date (v1.0.3).';
+          if (statusEl) {
+            statusEl.innerHTML = '<span style="color: #d93025;">⚠️ Error: ' + escapeHtml(e.message) + '</span>';
+          }
         }
       } else {
-        statusEl.textContent = 'Running live web engine (v1.0.3).';
+        if (statusEl) {
+          statusEl.innerHTML = '<span style="color: #188038;">🌐 Running latest Web Engine (v1.0.6). Always fresh via GitHub Pages!</span>';
+        }
+        showToast('Web version is always up to date');
+      }
+
+      if (triggerBtn) {
+        triggerBtn.disabled = false;
+        triggerBtn.textContent = '🔄 Check & Apply Latest Update';
       }
     }
 
@@ -4083,6 +4122,13 @@
     }
       window.addEventListener('DOMContentLoaded', () => {
       checkLockScreenState();
+      if (window.electronAPI && window.electronAPI.onUpdateAvailable) {
+        window.electronAPI.onUpdateAvailable((info) => {
+          const dot = document.getElementById('updateDot');
+          if (dot) dot.style.display = 'block';
+          showToast('⚡ New update available (v' + (info && info.latestVersion || '1.0.6') + ')! Click Update to install.');
+        });
+      }
     });
   
 </script>
