@@ -3453,6 +3453,19 @@
       if (elName) elName.value = '';
       if (elEmail) elEmail.value = '';
       if (elFolder) elFolder.value = '';
+
+      // Populate datalist of detected local Chrome accounts
+      let dl = document.getElementById('detectedChromeDatalist');
+      if (!dl) {
+        dl = document.createElement('datalist');
+        dl.id = 'detectedChromeDatalist';
+        document.body.appendChild(dl);
+      }
+      if (elEmail) elEmail.setAttribute('list', 'detectedChromeDatalist');
+      if (Array.isArray(localDetectedProfiles) && localDetectedProfiles.length > 0) {
+        dl.innerHTML = localDetectedProfiles.map(p => '<option value="' + escapeHtml(p.email) + '">' + escapeHtml(p.name || p.email) + '</option>').join('');
+      }
+
       openModal('addProfileModal');
       if (elName) setTimeout(() => elName.focus(), 50);
     }
@@ -3492,10 +3505,17 @@
       if (!Array.isArray(vaultData.profiles)) vaultData.profiles = [];
       vaultData.profiles.push(newProf);
 
+      // If user adds an email not on this PC while in local view, switch to cloud view so it is visible
+      if (isDesktopApp && filterToLocalOnly && email && !getLocalEmailsSet().has(email)) {
+        filterToLocalOnly = false;
+        showToast('✅ Profile added! (Showing in Cloud view)');
+      } else {
+        showToast('✅ Profile added to your account!');
+      }
+
       await saveVault();
       renderApp();
       closeModal('addProfileModal');
-      showToast('✅ Profile added to your account!');
     }
 
     /* ==========================================================================
