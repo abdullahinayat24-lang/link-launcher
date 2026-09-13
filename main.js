@@ -99,6 +99,12 @@ function createWindow() {
   const activePath = getActiveHtmlPath();
   mainWindow.loadFile(activePath);
 
+  mainWindow.on('focus', () => {
+    if (mainWindow && mainWindow.webContents) {
+      mainWindow.webContents.focus();
+    }
+  });
+
   // Fallback to bundled HTML if loaded path fails
   mainWindow.webContents.on('did-fail-load', () => {
     const bundledPath = path.join(__dirname, 'index.html');
